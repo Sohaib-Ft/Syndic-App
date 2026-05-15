@@ -1,0 +1,81 @@
+// Schema Prisma — Gestion de Syndic d'Appartements (SQLite Version)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== MODÈLES ====================
+
+model User {
+  id            Int          @id @default(autoincrement())
+  email         String       @unique
+  password      String
+  role          String       @default("RESIDENT") // "SYNDIC" | "RESIDENT"
+  nom           String
+  prenom        String
+  telephone     String?
+  actif         Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  appartement   Appartement? @relation(fields: [appartementId], references: [id])
+  appartementId Int?         @unique
+  paiements     Paiement[]
+}
+
+model Appartement {
+  id                Int          @id @default(autoincrement())
+  numero            String       @unique
+  etage             Int
+  superficie        Float
+  nbPieces          Int
+  type              String?
+  description       String?
+  statut            String       @default("VACANT") // "OCCUPE" | "VACANT"
+  chargesMensuelles Float        @default(0)
+  resident          User?
+  paiements         Paiement[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model Paiement {
+  id            Int            @id @default(autoincrement())
+  montant       Float
+  mois          Int
+  annee         Int
+  statut        String         @default("EN_ATTENTE") // "PAYE" | "EN_ATTENTE" | "EN_RETARD"
+  datePaiement  DateTime?
+  appartement   Appartement    @relation(fields: [appartementId], references: [id])
+  appartementId Int
+  resident      User           @relation(fields: [residentId], references: [id])
+  residentId    Int
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([appartementId, mois, annee])
+}
+
+model Annonce {
+  id        Int              @id @default(autoincrement())
+  titre     String
+  contenu   String
+  categorie String           // "INFO" | "URGENT" | "TRAVAUX" | "ASSEMBLEE"
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model Charge {
+  id          Int             @id @default(autoincrement())
+  libelle     String
+  montant     Float
+  categorie   String          // "ENTRETIEN" | "ELECTRICITE" | "EAU" | "ASCENSEUR" | "NETTOYAGE" | "REPARATIONS" | "DIVERS"
+  date        DateTime
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
