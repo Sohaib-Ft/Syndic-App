@@ -7,7 +7,9 @@ const api = axios.create({ baseURL: API_URL });
 // Intercepteur pour ajouter le token JWT
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
+  const lang = localStorage.getItem('syndic_lang');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (lang) config.headers['x-lang'] = lang;
   return config;
 });
 
@@ -27,8 +29,11 @@ api.interceptors.response.use(
 // ==================== AUTH ====================
 export const authAPI = {
   login: (data) => api.post('/auth/login', data),
+  forgotPassword: (data) => api.post('/auth/forgot-password', data),
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
+  resetPassword: (data) => api.post('/auth/reset-password', data),
+  changePassword: (data) => api.post('/auth/change-password', data),
 };
 
 // ==================== APPARTEMENTS ====================
@@ -76,6 +81,18 @@ export const chargeAPI = {
   update: (id, data) => api.put(`/charges/${id}`, data),
   delete: (id) => api.delete(`/charges/${id}`),
   stats: (annee) => api.get('/charges/stats', { params: { annee } }),
+};
+
+// ==================== CHARGES RÉSIDENTS ====================
+export const residentChargeAPI = {
+  getPartielles: () => api.get('/resident-charges/partielles'),
+  createPartielle: (data) => api.post('/resident-charges/partielles', data),
+  updatePartielle: (id, data) => api.put(`/resident-charges/partielles/${id}`, data),
+  deletePartielle: (id) => api.delete(`/resident-charges/partielles/${id}`),
+  validerPartielle: (chargeId, residentId) => api.post(`/resident-charges/partielles/${chargeId}/valider/${residentId}`),
+  getEssentielle: () => api.get('/resident-charges/essentielle'),
+  updateEssentielle: (value) => api.put('/resident-charges/essentielle', { value }),
+  getMesCharges: () => api.get('/resident-charges/mes-charges'),
 };
 
 // ==================== DASHBOARD ====================

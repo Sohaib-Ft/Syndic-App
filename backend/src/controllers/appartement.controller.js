@@ -39,7 +39,7 @@ export const createAppartement = async (req, res) => {
   try {
     const { numero, etage, superficie, nbPieces, type, description, chargesMensuelles } = req.body;
 
-    if (!numero || etage === undefined || !superficie || !nbPieces) {
+    if (!numero || etage === undefined || !nbPieces) {
       return res.status(400).json({ message: 'Champs obligatoires manquants.' });
     }
 
@@ -47,7 +47,7 @@ export const createAppartement = async (req, res) => {
     if (existing) return res.status(400).json({ message: 'Ce numéro d\'appartement existe déjà.' });
 
     const appartement = await prisma.appartement.create({
-      data: { numero, etage: parseInt(etage), superficie: parseFloat(superficie), nbPieces: parseInt(nbPieces), type, description, chargesMensuelles: parseFloat(chargesMensuelles) || 0 }
+      data: { numero, etage: parseInt(etage), superficie: parseFloat(superficie) || 0, nbPieces: parseInt(nbPieces), type, description, chargesMensuelles: parseFloat(chargesMensuelles) || 0 }
     });
 
     res.status(201).json({ message: 'Appartement créé avec succès.', appartement });

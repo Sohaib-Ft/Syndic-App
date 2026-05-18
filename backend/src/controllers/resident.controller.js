@@ -1,7 +1,16 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import nodemailer from 'nodemailer';
 
 const prisma = new PrismaClient();
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
 
 // GET /api/residents
 export const getAllResidents = async (req, res) => {
@@ -9,7 +18,7 @@ export const getAllResidents = async (req, res) => {
     const residents = await prisma.user.findMany({
       where: { role: 'RESIDENT' },
       select: {
-        id: true, nom: true, prenom: true, email: true, telephone: true, actif: true, createdAt: true,
+        id: true, nom: true, prenom: true, email: true, telephone: true, typeResident: true, actif: true, createdAt: true,
         appartement: { select: { id: true, numero: true, etage: true, superficie: true } }
       },
       orderBy: { nom: 'asc' }
@@ -44,9 +53,10 @@ export const getResidentById = async (req, res) => {
 // POST /api/residents
 export const createResident = async (req, res) => {
   try {
-    const { nom, prenom, email, telephone, password, appartementId } = req.body;
+    const { nom, prenom, email, telephone, typeResident, appartementId } = req.body;
 
-    if (!nom || !prenom || !email || !password) {
+    console.log('Body reçu:', req.body);
+    if (!nom || !prenom || !email) {
       return res.status(400).json({ message: 'Champs obligatoires manquants.' });
     }
 
@@ -59,11 +69,34 @@ export const createResident = async (req, res) => {
       if (appart.resident) return res.status(400).json({ message: 'Cet appartement est déjà occupé.' });
     }
 
+    const generatePassword = () => {
+      const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const lower = 'abcdefghijklmnopqrstuvwxyz';
+      const numbers = '0123456789';
+      const symbols = '!@#$%^&*()_+';
+      const all = upper + lower + numbers + symbols;
+
+      let pass = '';
+      pass += upper[Math.floor(Math.random() * upper.length)];
+      pass += lower[Math.floor(Math.random() * lower.length)];
+      pass += numbers[Math.floor(Math.random() * numbers.length)];
+      pass += symbols[Math.floor(Math.random() * symbols.length)];
+
+      for (let i = 4; i < 10; i++) {
+        pass += all[Math.floor(Math.random() * all.length)];
+      }
+
+      // Shuffle the string
+      return pass.split('').sort(() => 0.5 - Math.random()).join('');
+    };
+
+    const password = generatePassword();
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const resident = await prisma.user.create({
       data: {
-        nom, prenom, email, telephone, password: hashedPassword, role: 'RESIDENT',
+        nom, prenom, email, telephone, typeResident, password: hashedPassword, role: 'RESIDENT',
+        mustChangePassword: true,
         ...(appartementId && { appartementId: parseInt(appartementId) })
       },
       include: { appartement: true }
@@ -74,11 +107,38 @@ export const createResident = async (req, res) => {
       await prisma.appartement.update({ where: { id: parseInt(appartementId) }, data: { statut: 'OCCUPE' } });
     }
 
+    try {
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        await transporter.sendMail({
+          from: `"SyndicPro" <${process.env.EMAIL_USER}>`,
+          to: email,
+          subject: 'Bienvenue sur SyndicPro - Vos accès',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px;">
+              <h2 style="color: #1e3a5f; margin-bottom: 20px;">Bienvenue sur SyndicPro</h2>
+              <p style="color: #475569;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+              <p style="color: #475569;">Voici vos identifiants de connexion :</p>
+              <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                <p style="margin: 5px 0;"><strong>Email :</strong> ${email}</p>
+                <p style="margin: 5px 0;"><strong>Mot de passe :</strong> <code style="background: #e2e8f0; padding: 3px 8px; border-radius: 4px; font-size: 16px;">${password}</code></p>
+              </div>
+              <p style="color: #ef4444; font-weight: bold; font-size: 14px;">⚠️ Vous devrez changer votre mot de passe lors de votre première connexion.</p>
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" style="display: inline-block; margin-top: 15px; padding: 12px 24px; background: #1e3a5f; color: white; text-decoration: none; border-radius: 10px; font-weight: bold;">Se connecter</a>
+            </div>
+          `
+        });
+      } else {
+        console.warn("L'envoi d'email est désactivé. Veuillez configurer EMAIL_USER et EMAIL_PASS dans le fichier .env");
+      }
+    } catch (mailError) {
+      console.error("Erreur lors de l'envoi de l'email:", mailError);
+    }
+
     const { password: _, ...data } = resident;
     res.status(201).json({ message: 'Résident créé avec succès.', resident: data });
   } catch (error) {
-    console.error('Erreur createResident:', error);
-    res.status(500).json({ message: 'Erreur serveur.' });
+    console.error('Erreur complète createResident:', error);
+    res.status(500).json({ message: 'Erreur serveur: ' + error.message });
   }
 };
 
@@ -86,7 +146,7 @@ export const createResident = async (req, res) => {
 export const updateResident = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nom, prenom, email, telephone, appartementId, actif } = req.body;
+    const { nom, prenom, email, telephone, typeResident, appartementId, actif } = req.body;
 
     const resident = await prisma.user.findUnique({ where: { id: parseInt(id) } });
     if (!resident || resident.role !== 'RESIDENT') return res.status(404).json({ message: 'Résident non trouvé.' });
@@ -118,6 +178,7 @@ export const updateResident = async (req, res) => {
         ...(prenom && { prenom }),
         ...(email && { email }),
         ...(telephone !== undefined && { telephone }),
+        ...(typeResident !== undefined && { typeResident }),
         ...(appartementId !== undefined && { appartementId: appartementId ? parseInt(appartementId) : null }),
         ...(actif !== undefined && { actif })
       },

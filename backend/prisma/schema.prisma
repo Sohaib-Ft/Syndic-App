@@ -19,12 +19,17 @@ model User {
   nom           String
   prenom        String
   telephone     String?
+  typeResident  String?      @default("PROPRIETAIRE") // "PROPRIETAIRE" | "LOCATAIRE"
   actif         Boolean      @default(true)
+  resetToken    String?
+  resetTokenExpiry DateTime?
+  mustChangePassword Boolean @default(false)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   appartement   Appartement? @relation(fields: [appartementId], references: [id])
   appartementId Int?         @unique
   paiements     Paiement[]
+  chargesPartielles ChargePartielleResident[]
 }
 
 model Appartement {
@@ -63,7 +68,13 @@ model Paiement {
 model Annonce {
   id        Int              @id @default(autoincrement())
   titre     String
+  titreFr   String?
+  titreEn   String?
+  titreAr   String?
   contenu   String
+  contenuFr String?
+  contenuEn String?
+  contenuAr String?
   categorie String           // "INFO" | "URGENT" | "TRAVAUX" | "ASSEMBLEE"
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
@@ -78,4 +89,37 @@ model Charge {
   description String?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+}
+
+// Nouvelles charges pour les résidents
+model ChargePartielle {
+  id          Int             @id @default(autoincrement())
+  libelle     String
+  montant     Float
+  date        DateTime
+  description String?
+  isGlobal    Boolean         @default(true)
+  residents   ChargePartielleResident[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model ChargePartielleResident {
+  id                Int             @id @default(autoincrement())
+  chargePartielleId Int
+  chargePartielle   ChargePartielle @relation(fields: [chargePartielleId], references: [id], onDelete: Cascade)
+  residentId        Int
+  resident          User            @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  statut            String          @default("EN_ATTENTE") // "PAYE" | "EN_ATTENTE"
+  datePaiement      DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([chargePartielleId, residentId])
+}
+
+model Setting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
 }

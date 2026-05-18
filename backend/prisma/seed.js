@@ -99,11 +99,61 @@ async function main() {
 
   // ==================== ANNONCES ====================
   const annoncesData = [
-    { titre: 'Assemblée Générale Annuelle', contenu: 'L\'assemblée générale annuelle se tiendra le samedi 15 juin à 10h dans la salle commune. Votre présence est obligatoire.', categorie: 'ASSEMBLEE' },
-    { titre: 'Travaux de rénovation ascenseur', contenu: 'Des travaux de maintenance sur l\'ascenseur principal auront lieu du 20 au 25 du mois. Merci d\'utiliser les escaliers.', categorie: 'TRAVAUX' },
-    { titre: 'Rappel : Règlement des charges', contenu: 'Nous rappelons à tous les résidents que le paiement des charges doit être effectué avant le 10 de chaque mois.', categorie: 'INFO' },
-    { titre: 'Coupure d\'eau programmée', contenu: 'Une coupure d\'eau est prévue le mercredi de 8h à 14h pour travaux de maintenance. Veuillez prévoir vos réserves.', categorie: 'URGENT' },
-    { titre: 'Nouveau règlement intérieur', contenu: 'Le nouveau règlement intérieur est disponible. Il sera affiché dans le hall et envoyé par email à tous les résidents.', categorie: 'INFO' },
+    {
+      titre: 'Assemblée Générale Annuelle',
+      titreFr: 'Assemblée Générale Annuelle',
+      titreEn: 'Annual General Assembly',
+      titreAr: 'الجمع العام السنوي',
+      contenu: 'L\'assemblée générale annuelle se tiendra le samedi 15 juin à 10h dans la salle commune. Votre présence est obligatoire.',
+      contenuFr: 'L\'assemblée générale annuelle se tiendra le samedi 15 juin à 10h dans la salle commune. Votre présence est obligatoire.',
+      contenuEn: 'The annual general assembly will be held on Saturday, June 15 at 10:00 AM in the common hall. Your attendance is mandatory.',
+      contenuAr: 'سيُعقد الجمع العام السنوي يوم السبت 15 يونيو على الساعة 10 صباحا في القاعة المشتركة. حضوركم إلزامي.',
+      categorie: 'ASSEMBLEE'
+    },
+    {
+      titre: 'Travaux de rénovation ascenseur',
+      titreFr: 'Travaux de rénovation ascenseur',
+      titreEn: 'Elevator renovation works',
+      titreAr: 'أشغال صيانة المصعد',
+      contenu: 'Des travaux de maintenance sur l\'ascenseur principal auront lieu du 20 au 25 du mois. Merci d\'utiliser les escaliers.',
+      contenuFr: 'Des travaux de maintenance sur l\'ascenseur principal auront lieu du 20 au 25 du mois. Merci d\'utiliser les escaliers.',
+      contenuEn: 'Maintenance work on the main elevator will take place from the 20th to the 25th of the month. Please use the stairs.',
+      contenuAr: 'ستُجرى أشغال صيانة بالمصعد الرئيسي من 20 إلى 25 من الشهر. يرجى استعمال السلالم.',
+      categorie: 'TRAVAUX'
+    },
+    {
+      titre: 'Rappel : Règlement des charges',
+      titreFr: 'Rappel : Règlement des charges',
+      titreEn: 'Reminder: Charge payments',
+      titreAr: 'تذكير: أداء المصاريف',
+      contenu: 'Nous rappelons à tous les résidents que le paiement des charges doit être effectué avant le 10 de chaque mois.',
+      contenuFr: 'Nous rappelons à tous les résidents que le paiement des charges doit être effectué avant le 10 de chaque mois.',
+      contenuEn: 'We remind all residents that charge payments must be made before the 10th of each month.',
+      contenuAr: 'نذكّر جميع السكان بأن أداء المصاريف يجب أن يتم قبل اليوم العاشر من كل شهر.',
+      categorie: 'INFO'
+    },
+    {
+      titre: 'Coupure d\'eau programmée',
+      titreFr: 'Coupure d\'eau programmée',
+      titreEn: 'Scheduled water outage',
+      titreAr: 'انقطاع ماء مبرمج',
+      contenu: 'Une coupure d\'eau est prévue le mercredi de 8h à 14h pour travaux de maintenance. Veuillez prévoir vos réserves.',
+      contenuFr: 'Une coupure d\'eau est prévue le mercredi de 8h à 14h pour travaux de maintenance. Veuillez prévoir vos réserves.',
+      contenuEn: 'A water outage is scheduled on Wednesday from 8 AM to 2 PM for maintenance work. Please prepare your reserves.',
+      contenuAr: 'من المقرر انقطاع الماء يوم الأربعاء من الساعة 8 إلى 14 بسبب أشغال الصيانة. يرجى تجهيز احتياطاتكم.',
+      categorie: 'URGENT'
+    },
+    {
+      titre: 'Nouveau règlement intérieur',
+      titreFr: 'Nouveau règlement intérieur',
+      titreEn: 'New internal regulations',
+      titreAr: 'نظام داخلي جديد',
+      contenu: 'Le nouveau règlement intérieur est disponible. Il sera affiché dans le hall et envoyé par email à tous les résidents.',
+      contenuFr: 'Le nouveau règlement intérieur est disponible. Il sera affiché dans le hall et envoyé par email à tous les résidents.',
+      contenuEn: 'The new internal regulations are available. They will be posted in the lobby and emailed to all residents.',
+      contenuAr: 'النظام الداخلي الجديد متوفر. سيتم تعليقه في بهو العمارة وإرساله عبر البريد الإلكتروني لجميع السكان.',
+      categorie: 'INFO'
+    },
   ];
 
   for (const data of annoncesData) {

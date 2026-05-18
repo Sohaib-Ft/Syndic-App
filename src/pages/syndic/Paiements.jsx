@@ -1,32 +1,44 @@
 import { useState, useEffect } from 'react';
-import { paiementAPI } from '../../services/api';
-import { CreditCard, Check, Filter, TrendingUp, Calendar } from 'lucide-react';
+import { paiementAPI, residentChargeAPI, chargeAPI } from '../../services/api';
+import { useLang } from '../../contexts/LangContext';
+import { CreditCard, Check, Filter, TrendingUp, Search, Settings, X, Wallet, Users, PiggyBank } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import toast from 'react-hot-toast';
 
-const moisNoms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-
 export default function Paiements() {
+  const { t } = useLang();
   const [paiements, setPaiements] = useState([]);
+  const [charges, setCharges] = useState([]);
   const [stats, setStats] = useState([]);
   const [statsAnnuel, setStatsAnnuel] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ mois: '', annee: new Date().getFullYear().toString(), statut: '' });
+  const [filters, setFilters] = useState({
+    mois: (new Date().getMonth() + 1).toString(),
+    annee: new Date().getFullYear().toString(),
+    statut: ''
+  });
+  const [search, setSearch] = useState('');
   const [showStats, setShowStats] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  const [essentialAmount, setEssentialAmount] = useState('');
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     try {
-      const [pRes, sRes, aRes] = await Promise.all([
+      const [pRes, sRes, aRes, essRes, cRes] = await Promise.all([
         paiementAPI.getAll(filters),
         paiementAPI.statsMensuel(),
-        paiementAPI.statsAnnuel(new Date().getFullYear())
+        paiementAPI.statsAnnuel(new Date().getFullYear()),
+        residentChargeAPI.getEssentielle(),
+        chargeAPI.getAll()
       ]);
       setPaiements(pRes.data);
       setStats(sRes.data);
       setStatsAnnuel(aRes.data);
-    } catch { toast.error('Erreur de chargement'); }
+      setEssentialAmount(essRes.data.value);
+      setCharges(cRes.data);
+    } catch { toast.error(t.loadingError); }
     finally { setLoading(false); }
   };
 
@@ -38,147 +50,232 @@ export default function Paiements() {
       if (filters.statut) params.statut = filters.statut;
       const { data } = await paiementAPI.getAll(params);
       setPaiements(data);
-    } catch { toast.error('Erreur'); }
+    } catch { toast.error(t.error); }
   };
 
   const handleValider = async (id) => {
     try {
       await paiementAPI.valider(id);
-      toast.success('Paiement validé');
+      toast.success(t.paymentValidated);
       loadData();
-    } catch { toast.error('Erreur'); }
+    } catch { toast.error(t.error); }
   };
 
-  const handleGenerer = async () => {
-    const mois = new Date().getMonth() + 1;
-    const annee = new Date().getFullYear();
-    if (!confirm(`Générer les paiements pour ${moisNoms[mois]} ${annee} ?`)) return;
+  const handleUpdateEssential = async (e) => {
+    e.preventDefault();
     try {
-      const { data } = await paiementAPI.generer({ mois, annee });
-      toast.success(data.message);
-      loadData();
-    } catch (error) { toast.error(error.response?.data?.message || 'Erreur'); }
+      await residentChargeAPI.updateEssentielle(essentialAmount);
+      toast.success(t.monthlyChargeUpdated);
+      setShowConfig(false);
+    } catch {
+      toast.error(t.error);
+    }
   };
+
+  const filteredPaiements = paiements.filter(p =>
+    `${p.resident.nom} ${p.resident.prenom}`.toLowerCase().includes(search.toLowerCase()) ||
+    `${p.resident.prenom} ${p.resident.nom}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalDuMois = filteredPaiements.filter(p => p.statut === 'PAYE').reduce((sum, p) => sum + p.montant, 0);
+  const totalConsumed = charges.reduce((sum, c) => sum + c.montant, 0);
+  const totalApresCharges = (statsAnnuel ? statsAnnuel.totalPaye : 0) - totalConsumed;
 
   if (loading) return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e3a5f]" /></div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 relative">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Paiements</h1>
-          <p className="text-slate-500 mt-1">Gestion des charges mensuelles</p>
+          <h1 className="text-2xl font-bold text-slate-800">{t.paymentsTitle}</h1>
+          <p className="text-slate-500 mt-1">{t.paymentsSubtitle}</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowStats(!showStats)} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-medium text-sm hover:bg-slate-50 transition-all">
-            <TrendingUp className="w-4 h-4" /> Statistiques
-          </button>
-          <button onClick={handleGenerer} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#1e3a5f] to-[#2a5080] text-white rounded-xl font-medium text-sm hover:shadow-lg transition-all">
-            <Calendar className="w-4 h-4" /> Générer le mois
+
+        <div className="flex flex-wrap items-center gap-3">
+          {!showStats && (
+            <>
+              <div className="bg-blue-50 px-4 py-2.5 rounded-xl border border-blue-100 flex items-center gap-3">
+                <Wallet className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">{t.totalOfMonth}</p>
+                  <p className="text-lg font-black text-blue-700">{totalDuMois.toLocaleString('fr-FR')} DH</p>
+                </div>
+              </div>
+              
+              <button onClick={() => setShowConfig(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-100 text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-100 transition-all">
+                <Settings className="w-4 h-4" /> {t.configureFixedAmount}
+              </button>
+            </>
+          )}
+
+          <button onClick={() => setShowStats(!showStats)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm ${showStats ? 'bg-[#1e3a5f] text-white border border-[#2a5080]' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            {showStats ? <Users className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
+            {showStats ? t.back : t.viewStatistics}
           </button>
         </div>
       </div>
 
-      {/* Stats annuelles */}
-      {statsAnnuel && (
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          {[
-            { label: 'Total encaissé', value: `${statsAnnuel.totalPaye.toLocaleString('fr-FR')} DH`, color: 'text-emerald-600' },
-            { label: 'Total attendu', value: `${statsAnnuel.totalAttendu.toLocaleString('fr-FR')} DH`, color: 'text-blue-600' },
-            { label: 'Impayés', value: `${statsAnnuel.totalImpayes.toLocaleString('fr-FR')} DH`, color: 'text-red-500' },
-            { label: 'Taux recouvrement', value: `${statsAnnuel.tauxRecouvrement}%`, color: 'text-amber-600' },
-          ].map((s, i) => (
-            <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-              <p className="text-xs text-slate-500 font-medium">{s.label} ({statsAnnuel.annee})</p>
-              <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+      {/* VUE STATISTIQUES */}
+      {showStats ? (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {statsAnnuel && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { label: t.totalCollected, value: `${statsAnnuel.totalPaye.toLocaleString('fr-FR')} DH`, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100' },
+                { label: t.totalAfterCharges, value: `${totalApresCharges.toLocaleString('fr-FR')} DH`, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100' },
+                { label: t.totalExpected, value: `${statsAnnuel.totalAttendu.toLocaleString('fr-FR')} DH`, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100' },
+                { label: t.unpaid, value: `${statsAnnuel.totalImpayes.toLocaleString('fr-FR')} DH`, color: 'text-red-500', bg: 'bg-red-50 border-red-100' },
+                { label: t.recoveryRate, value: `${statsAnnuel.tauxRecouvrement}%`, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
+                { label: t.fixedCharge, value: `${essentialAmount} DH`, color: 'text-[#1e3a5f]', bg: 'bg-slate-50 border-slate-100', isConfig: true },
+              ].map((s, i) => (
+                <div key={i} className={`rounded-2xl p-6 shadow-sm border ${s.bg} relative group`}>
+                  <p className="text-sm text-slate-600 font-bold uppercase tracking-wider">{s.label} ({statsAnnuel.annee})</p>
+                  <p className={`text-3xl font-black mt-2 ${s.color}`}>{s.value}</p>
+                  {s.isConfig && (
+                    <button
+                      onClick={() => setShowConfig(true)}
+                      className="absolute top-4 right-4 p-2 bg-white rounded-lg shadow-sm border border-slate-200 text-slate-400 hover:text-[#1e3a5f] opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
+            <h3 className="text-lg font-bold text-slate-800 mb-6">{t.paymentsReceivedVsExpected}</h3>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={stats}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} dy={10} />
+                <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} dx={-10} />
+                <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} formatter={(v) => `${v.toLocaleString('fr-FR')} DH`} />
+                <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                <Bar dataKey="totalAttendu" fill="#cbd5e1" name={t.expected} radius={[6, 6, 0, 0]} barSize={30} />
+                <Bar dataKey="totalPaye" fill="#1e3a5f" name={t.received} radius={[6, 6, 0, 0]} barSize={30} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      ) : (
+        /* VUE LISTE (TABLEAU) */
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-wrap gap-3 items-end">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">{t.month}</label>
+              <select value={filters.mois} onChange={e => setFilters({ ...filters, mois: e.target.value })} className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium outline-none focus:border-[#1e3a5f]">
+                {t.months.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">{t.year}</label>
+              <select value={filters.annee} onChange={e => setFilters({ ...filters, annee: e.target.value })} className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium outline-none focus:border-[#1e3a5f]">
+                {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">{t.statusFilter}</label>
+              <select value={filters.statut} onChange={e => setFilters({ ...filters, statut: e.target.value })} className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium outline-none focus:border-[#1e3a5f]">
+                <option value="">{t.all}</option>
+                <option value="PAYE">{t.paid}</option>
+                <option value="EN_ATTENTE">{t.pending}</option>
+                <option value="EN_RETARD">{t.late}</option>
+              </select>
+            </div>
+            <button onClick={applyFilters} className="flex items-center gap-2 px-6 py-2.5 bg-[#1e3a5f] text-white rounded-xl text-sm font-bold hover:bg-[#2a5080] transition-colors shadow-sm">
+              <Filter className="w-4 h-4" /> {t.filter}
+            </button>
+
+            <div className="flex-1 min-w-[200px] relative">
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">{t.search}</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.nameOrFirstName}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium outline-none focus:border-[#1e3a5f]" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">
+                {t.paymentsList} {filters.mois ? `- ${t.months[filters.mois]} ${filters.annee}` : `(${filters.annee})`}
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead><tr className="bg-slate-50 border-b border-slate-100">
+                  {[t.resident, t.apartment, t.period, t.amount, t.status, t.paymentDate, t.action].map(h => (
+                    <th key={h} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredPaiements.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 text-sm font-bold text-slate-800">{p.resident.prenom} {p.resident.nom}</td>
+                      <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.appartement.numero}</td>
+                      <td className="px-6 py-4 text-sm font-medium text-slate-600">{t.months[p.mois]} {p.annee}</td>
+                      <td className="px-6 py-4 text-sm font-black text-[#1e3a5f]">{p.montant.toLocaleString('fr-FR')} DH</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.statut === 'PAYE' ? 'bg-emerald-100 text-emerald-700' : p.statut === 'EN_RETARD' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {p.statut === 'PAYE' ? t.paid : p.statut === 'EN_RETARD' ? t.late : t.pending}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.datePaiement ? new Date(p.datePaiement).toLocaleDateString(t.dir === 'rtl' ? 'ar-MA' : 'fr-FR') : '-'}</td>
+                      <td className="px-6 py-4">
+                        {p.statut !== 'PAYE' && (
+                          <button onClick={() => handleValider(p.id)} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-colors">
+                            <Check className="w-4 h-4" /> {t.validate}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {filteredPaiements.length === 0 && (
+              <div className="text-center py-16 text-slate-400 flex flex-col items-center justify-center">
+                <CreditCard className="w-16 h-16 mb-4 opacity-20 text-[#1e3a5f]" />
+                <p className="font-medium text-lg text-slate-500">{t.noPaymentFound}</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Chart */}
-      {showStats && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Paiements reçus vs attendus</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={stats}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => `${v.toLocaleString('fr-FR')} DH`} />
-              <Legend />
-              <Bar dataKey="totalAttendu" fill="#cbd5e1" name="Attendu" radius={[4,4,0,0]} />
-              <Bar dataKey="totalPaye" fill="#1e3a5f" name="Reçu" radius={[4,4,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
+      {/* Modal Configuration Charge Mensuelle */}
+      {showConfig && (
+        <div className="fixed inset-0 bg-[#1e3a5f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+            <div className="p-6 bg-slate-50 flex items-start justify-between border-b border-slate-100">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">{t.configurationTitle}</h3>
+                <p className="text-sm font-medium text-slate-500 mt-1">{t.fixedMonthlyChargeAmount}</p>
+              </div>
+              <button onClick={() => setShowConfig(false)} className="text-slate-400 hover:text-slate-700 bg-white p-2 rounded-full shadow-sm border border-slate-200 transition-all">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateEssential} className="p-8">
+              <label className="block text-sm font-bold text-slate-700 mb-2">{t.newAmountDH}</label>
+              <input
+                type="number"
+                required
+                value={essentialAmount}
+                onChange={e => setEssentialAmount(e.target.value)}
+                className="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 font-black text-xl text-[#1e3a5f] focus:border-[#1e3a5f] focus:ring-0 outline-none transition-all"
+                autoFocus
+              />
+              <button type="submit" className="w-full mt-8 py-4 bg-[#1e3a5f] text-white rounded-2xl text-base font-bold shadow-lg hover:shadow-[#1e3a5f]/30 hover:-translate-y-0.5 transition-all">
+                {t.saveChanges}
+              </button>
+            </form>
+          </div>
         </div>
       )}
-
-      {/* Filters */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-wrap gap-3 items-end">
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Mois</label>
-          <select value={filters.mois} onChange={e => setFilters({...filters, mois: e.target.value})} className="px-3 py-2 rounded-xl border border-slate-200 text-sm">
-            <option value="">Tous</option>
-            {moisNoms.slice(1).map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Année</label>
-          <select value={filters.annee} onChange={e => setFilters({...filters, annee: e.target.value})} className="px-3 py-2 rounded-xl border border-slate-200 text-sm">
-            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Statut</label>
-          <select value={filters.statut} onChange={e => setFilters({...filters, statut: e.target.value})} className="px-3 py-2 rounded-xl border border-slate-200 text-sm">
-            <option value="">Tous</option>
-            <option value="PAYE">Payé</option>
-            <option value="EN_ATTENTE">En attente</option>
-            <option value="EN_RETARD">En retard</option>
-          </select>
-        </div>
-        <button onClick={applyFilters} className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] text-white rounded-xl text-sm font-medium hover:bg-[#2a5080] transition-colors">
-          <Filter className="w-4 h-4" /> Filtrer
-        </button>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead><tr className="bg-slate-50 border-b border-slate-100">
-              {['Résident', 'Appartement', 'Période', 'Montant', 'Statut', 'Date paiement', 'Action'].map(h => (
-                <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr></thead>
-            <tbody className="divide-y divide-slate-100">
-              {paiements.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-slate-800">{p.resident.prenom} {p.resident.nom}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{p.appartement.numero}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{moisNoms[p.mois]} {p.annee}</td>
-                  <td className="px-6 py-4 text-sm font-semibold text-slate-700">{p.montant.toLocaleString('fr-FR')} DH</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${p.statut === 'PAYE' ? 'bg-emerald-100 text-emerald-700' : p.statut === 'EN_RETARD' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {p.statut === 'PAYE' ? '✅ Payé' : p.statut === 'EN_RETARD' ? '❌ Retard' : '⏳ En attente'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{p.datePaiement ? new Date(p.datePaiement).toLocaleDateString('fr-FR') : '-'}</td>
-                  <td className="px-6 py-4">
-                    {p.statut !== 'PAYE' && (
-                      <button onClick={() => handleValider(p.id)} className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors">
-                        <Check className="w-3.5 h-3.5" /> Valider
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {paiements.length === 0 && <div className="text-center py-12 text-slate-400"><CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" /><p>Aucun paiement trouvé</p></div>}
-      </div>
     </div>
   );
 }

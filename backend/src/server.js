@@ -1,9 +1,7 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 import authRoutes from './routes/auth.routes.js';
 import appartementRoutes from './routes/appartement.routes.js';
@@ -11,6 +9,7 @@ import residentRoutes from './routes/resident.routes.js';
 import paiementRoutes from './routes/paiement.routes.js';
 import annonceRoutes from './routes/annonce.routes.js';
 import chargeRoutes from './routes/charge.routes.js';
+import residentChargeRoutes from './routes/residentCharge.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 
 const app = express();
@@ -31,6 +30,7 @@ app.use('/api/residents', residentRoutes);
 app.use('/api/paiements', paiementRoutes);
 app.use('/api/annonces', annonceRoutes);
 app.use('/api/charges', chargeRoutes);
+app.use('/api/resident-charges', residentChargeRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/api/health', (req, res) => {
@@ -53,5 +53,8 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🏢 Serveur Syndic démarré sur http://localhost:${PORT}`);
 });
+
+// Force le processus à rester actif
+setInterval(() => {}, 10000);
 
 export default app;
