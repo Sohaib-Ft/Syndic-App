@@ -157,25 +157,27 @@ export default function Register() {
                 </div>
 
                 {/* Checklist visuelle du mot de passe */}
-                <div className="mt-3 p-3 bg-slate-50 rounded-xl space-y-1.5 text-xs border border-slate-100">
-                  <p className="font-semibold text-slate-600 mb-1">Critères du mot de passe :</p>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${rules.length ? 'bg-emerald-500' : 'bg-red-400'}`} />
-                    <span className={rules.length ? 'text-emerald-700' : 'text-slate-500'}>8 caractères minimum</span>
+                {password && (
+                  <div className="mt-3 p-3 bg-slate-50 rounded-xl space-y-1.5 text-xs border border-slate-100">
+                    <p className="font-semibold text-slate-600 mb-1">Critères du mot de passe :</p>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${rules.length ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                      <span className={rules.length ? 'text-emerald-700' : 'text-slate-500'}>8 caractères minimum</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${rules.uppercase ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                      <span className={rules.uppercase ? 'text-emerald-700' : 'text-slate-500'}>Au moins une lettre majuscule</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${rules.number ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                      <span className={rules.number ? 'text-emerald-700' : 'text-slate-500'}>Au moins un chiffre</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${rules.special ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                      <span className={rules.special ? 'text-emerald-700' : 'text-slate-500'}>Au moins un caractère spécial</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${rules.uppercase ? 'bg-emerald-500' : 'bg-red-400'}`} />
-                    <span className={rules.uppercase ? 'text-emerald-700' : 'text-slate-500'}>Au moins une lettre majuscule</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${rules.number ? 'bg-emerald-500' : 'bg-red-400'}`} />
-                    <span className={rules.number ? 'text-emerald-700' : 'text-slate-500'}>Au moins un chiffre</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${rules.special ? 'bg-emerald-500' : 'bg-red-400'}`} />
-                    <span className={rules.special ? 'text-emerald-700' : 'text-slate-500'}>Au moins un caractère spécial</span>
-                  </div>
-                </div>
+                )}
               </div>
 
               <div>
