@@ -49,12 +49,7 @@ npm install
 npm run dev
 ```
 
-## 🔑 Comptes de test
 
-| Rôle | Email | Mot de passe |
-|------|-------|-------------|
-| Syndic | syndic@immeuble.ma | admin123 |
-| Résident | youssef@mail.com | resident123 |
 
 ## 📁 Structure du projet
 
