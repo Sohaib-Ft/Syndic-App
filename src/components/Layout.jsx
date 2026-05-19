@@ -17,7 +17,7 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
 
-  const syndicMenu = [
+  const menu = [
     { path: '/syndic', label: t.dashboard, icon: LayoutDashboard, end: true },
     { path: '/syndic/appartements', label: t.apartments, icon: Building2 },
     { path: '/syndic/residents', label: t.residents, icon: Users },
@@ -25,15 +25,6 @@ export default function Layout() {
     { path: '/syndic/annonces', label: t.announcements, icon: Megaphone },
     { path: '/syndic/charges', label: t.charges, icon: Receipt },
   ];
-
-  const residentMenu = [
-    { path: '/resident', label: t.dashboard, icon: LayoutDashboard, end: true },
-    { path: '/resident/paiements', label: t.myPayments, icon: CreditCard },
-    { path: '/resident/charges', label: t.charges, icon: Receipt },
-    { path: '/resident/annonces', label: t.announcements, icon: Megaphone },
-  ];
-
-  const menu = user?.role === 'SYNDIC' ? syndicMenu : residentMenu;
 
   const handleLogout = () => {
     logout();
@@ -67,7 +58,7 @@ export default function Layout() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate">{user?.prenom} {user?.nom}</p>
-              <p className="text-xs text-blue-200/60">{user?.role === 'SYNDIC' ? t.admin : t.residentRole}</p>
+              <p className="text-xs text-blue-200/60">{t.admin}</p>
             </div>
           </div>
         </div>

@@ -53,6 +53,10 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Email ou mot de passe incorrect.' });
     }
 
+    if (user.role !== 'SYNDIC') {
+      return res.status(403).json({ message: 'Accès réservé au syndic.' });
+    }
+
     const token = jwt.sign(
       { userId: user.id, role: user.role },
       process.env.JWT_SECRET,

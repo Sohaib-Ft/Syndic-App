@@ -41,7 +41,7 @@ export default function Login() {
         toast('🔒 Vous devez changer votre mot de passe', { icon: '⚠️' });
       } else {
         toast.success(`${t.welcome}, ${user.prenom} !`);
-        navigate(user.role === 'SYNDIC' ? '/syndic' : '/resident');
+        navigate('/syndic');
       }
     } catch (error) {
       toast.error(error.response?.data?.message || t.loginError);
@@ -61,7 +61,7 @@ export default function Login() {
       const updatedUser = { ...loggedUser, mustChangePassword: false };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       toast.success('Mot de passe modifié avec succès !');
-      navigate(loggedUser.role === 'SYNDIC' ? '/syndic' : '/resident');
+      navigate('/syndic');
     } catch (error) {
       toast.error(error.response?.data?.message || t.error);
     } finally {

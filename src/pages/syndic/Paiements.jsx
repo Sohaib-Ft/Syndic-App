@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { paiementAPI, residentChargeAPI, chargeAPI } from '../../services/api';
 import { useLang } from '../../contexts/LangContext';
-import { CreditCard, Check, Filter, TrendingUp, Search, Settings, X, Wallet, Users, PiggyBank } from 'lucide-react';
+import { CreditCard, Check, Filter, TrendingUp, Search, Settings, X, Wallet, Users, PiggyBank, Printer } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useReactToPrint } from 'react-to-print';
 import toast from 'react-hot-toast';
 
 export default function Paiements() {
@@ -21,6 +22,22 @@ export default function Paiements() {
   const [showStats, setShowStats] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [essentialAmount, setEssentialAmount] = useState('');
+  
+  const [printingPayment, setPrintingPayment] = useState(null);
+  const printRef = useRef(null);
+
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+    documentTitle: `Recu_Paiement`,
+    onAfterPrint: () => setPrintingPayment(null)
+  });
+
+  const triggerPrint = (p) => {
+    setPrintingPayment(p);
+    setTimeout(() => {
+      handlePrint();
+    }, 100);
+  };
 
   useEffect(() => { loadData(); }, []);
 
@@ -224,10 +241,15 @@ export default function Paiements() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.datePaiement ? new Date(p.datePaiement).toLocaleDateString(t.dir === 'rtl' ? 'ar-MA' : 'fr-FR') : '-'}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 flex items-center gap-2">
                         {p.statut !== 'PAYE' && (
                           <button onClick={() => handleValider(p.id)} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-colors">
                             <Check className="w-4 h-4" /> {t.validate}
+                          </button>
+                        )}
+                        {p.statut === 'PAYE' && (
+                          <button onClick={() => triggerPrint(p)} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors" title="Imprimer le reçu">
+                            <Printer className="w-4 h-4" /> Imprimer
                           </button>
                         )}
                       </td>
@@ -245,6 +267,50 @@ export default function Paiements() {
           </div>
         </div>
       )}
+
+      {/* Hidden Print Receipt Template */}
+      <div className="hidden">
+        {printingPayment && (
+          <div ref={printRef} className="p-10 font-sans max-w-2xl mx-auto bg-white" style={{ color: '#1e3a5f' }}>
+            <div className="text-center mb-10 pb-6 border-b-2 border-slate-200">
+              <h1 className="text-4xl font-black mb-2 uppercase tracking-widest text-[#1e3a5f]">Reçu de Paiement</h1>
+              <p className="text-lg text-slate-500 font-medium">Syndicat de Copropriété</p>
+            </div>
+            
+            <div className="flex justify-between items-start mb-12">
+              <div>
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Résident</p>
+                <p className="text-xl font-bold">{printingPayment.resident.prenom} {printingPayment.resident.nom}</p>
+                <p className="text-md text-slate-600 mt-1">Appartement n° {printingPayment.appartement.numero}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Date d'édition</p>
+                <p className="text-lg font-bold">{new Date().toLocaleDateString('fr-FR')}</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-8 mb-12 border border-slate-100">
+              <div className="flex justify-between items-center mb-6 pb-6 border-b border-slate-200">
+                <span className="text-lg font-bold text-slate-600">Période concernée</span>
+                <span className="text-xl font-black capitalize">{t.months[printingPayment.mois]} {printingPayment.annee}</span>
+              </div>
+              <div className="flex justify-between items-center mb-6 pb-6 border-b border-slate-200">
+                <span className="text-lg font-bold text-slate-600">Date de paiement</span>
+                <span className="text-xl font-black">{printingPayment.datePaiement ? new Date(printingPayment.datePaiement).toLocaleDateString('fr-FR') : '-'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-2xl font-black text-[#1e3a5f] uppercase">Montant Total Payé</span>
+                <span className="text-3xl font-black text-emerald-600">{printingPayment.montant.toLocaleString('fr-FR')} DH</span>
+              </div>
+            </div>
+
+            <div className="mt-16 text-center text-slate-500 text-sm">
+              <p>Ce reçu est généré informatiquement et fait office de preuve de paiement.</p>
+              <p className="mt-2 font-bold">Merci de votre confiance.</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Modal Configuration Charge Mensuelle */}
       {showConfig && (

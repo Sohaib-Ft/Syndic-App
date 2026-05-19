@@ -38,9 +38,7 @@ export default function Residents() {
     try { await residentAPI.delete(id); toast.success(t.residentDeleted); loadData(); }
     catch (error) { toast.error(error.response?.data?.message || t.error); }
   };
-
-  const filtered = residents.filter(r => `${r.nom} ${r.prenom} ${r.email}`.toLowerCase().includes(search.toLowerCase()));
-
+  const filtered = residents.filter(r => `${r.nom} ${r.prenom}`.toLowerCase().includes(search.toLowerCase()));
   if (loading) return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e3a5f]" /></div>;
 
   return (
@@ -65,7 +63,7 @@ export default function Residents() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead><tr className="bg-slate-50 border-b border-slate-100">
-              {[t.resident, t.residentType, t.email, t.phone, t.apartment, t.status, t.actions].map(h => (
+              {[t.resident, t.residentType, t.phone, t.apartment, t.status, t.actions].map(h => (
                 <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
               ))}
             </tr></thead>
@@ -85,7 +83,6 @@ export default function Residents() {
                       {r.typeResident === 'LOCATAIRE' ? t.tenant : t.owner}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{r.email}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{r.telephone || '-'}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{r.appartement ? r.appartement.numero : <span className="text-slate-400">{t.notAssigned}</span>}</td>
                   <td className="px-6 py-4">
@@ -125,7 +122,6 @@ export default function Residents() {
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${detailModal.data.typeResident === 'LOCATAIRE' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
                       {detailModal.data.typeResident === 'LOCATAIRE' ? t.tenant : t.owner}
                     </span>
-                    <span className="flex items-center gap-1"><Mail className="w-4 h-4" />{detailModal.data.email}</span>
                     {detailModal.data.telephone && <span className="flex items-center gap-1"><Phone className="w-4 h-4" />{detailModal.data.telephone}</span>}
                   </div>
                 </div>

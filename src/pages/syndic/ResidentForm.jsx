@@ -115,12 +115,6 @@ export default function ResidentForm() {
                 placeholder={t.exLastName} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t.email} *</label>
-              <input required type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} 
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#1e3a5f] focus:ring-2 focus:ring-[#1e3a5f]/20 outline-none text-sm transition-all bg-slate-50 focus:bg-white" 
-                placeholder={t.exEmail} />
-            </div>
-            <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">{t.phone}</label>
               <input value={form.telephone} onChange={e => setForm({...form, telephone: e.target.value})} 
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#1e3a5f] focus:ring-2 focus:ring-[#1e3a5f]/20 outline-none text-sm transition-all bg-slate-50 focus:bg-white" 
