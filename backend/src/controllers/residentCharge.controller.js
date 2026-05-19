@@ -4,9 +4,12 @@ const prisma = new PrismaClient();
 
 // ==================== CHARGES PARTIELLES ====================
 
+// ==================== CHARGES PARTIELLES ====================
+
 export const getAllChargesPartielles = async (req, res) => {
   try {
     const charges = await prisma.chargePartielle.findMany({
+      where: { syndicId: req.user.id },
       include: { residents: { include: { resident: true } } },
       orderBy: { date: 'desc' }
     });
@@ -31,15 +34,16 @@ export const createChargePartielle = async (req, res) => {
         montant: parseFloat(montant), 
         date: new Date(date), 
         description, 
-        isGlobal 
+        isGlobal,
+        syndicId: req.user.id
       }
     });
 
     let targets = [];
     if (isGlobal) {
-      targets = await prisma.user.findMany({ where: { role: 'RESIDENT', actif: true } });
+      targets = await prisma.user.findMany({ where: { role: 'RESIDENT', actif: true, syndicId: req.user.id } });
     } else if (residentIds && residentIds.length > 0) {
-      targets = await prisma.user.findMany({ where: { id: { in: residentIds.map(id => parseInt(id)) } } });
+      targets = await prisma.user.findMany({ where: { id: { in: residentIds.map(id => parseInt(id)) }, syndicId: req.user.id } });
     }
 
     if (targets.length > 0) {
@@ -68,6 +72,11 @@ export const updateChargePartielle = async (req, res) => {
     const { id } = req.params;
     const { libelle, montant, date, description } = req.body;
     
+    const charge = await prisma.chargePartielle.findFirst({
+      where: { id: parseInt(id), syndicId: req.user.id }
+    });
+    if (!charge) return res.status(404).json({ message: 'Charge partielle non trouvée.' });
+
     const updated = await prisma.chargePartielle.update({
       where: { id: parseInt(id) },
       data: {
@@ -86,6 +95,11 @@ export const updateChargePartielle = async (req, res) => {
 
 export const deleteChargePartielle = async (req, res) => {
   try {
+    const charge = await prisma.chargePartielle.findFirst({
+      where: { id: parseInt(req.params.id), syndicId: req.user.id }
+    });
+    if (!charge) return res.status(404).json({ message: 'Charge partielle non trouvée.' });
+
     await prisma.chargePartielle.delete({ where: { id: parseInt(req.params.id) } });
     res.json({ message: 'Charge partielle supprimée.' });
   } catch (error) {
@@ -96,6 +110,12 @@ export const deleteChargePartielle = async (req, res) => {
 export const validerPaiementChargePartielle = async (req, res) => {
   try {
     const { chargeId, residentId } = req.params;
+
+    const charge = await prisma.chargePartielle.findFirst({
+      where: { id: parseInt(chargeId), syndicId: req.user.id }
+    });
+    if (!charge) return res.status(404).json({ message: 'Charge partielle non trouvée.' });
+
     await prisma.chargePartielleResident.update({
       where: { chargePartielleId_residentId: { chargePartielleId: parseInt(chargeId), residentId: parseInt(residentId) } },
       data: { statut: 'PAYE', datePaiement: new Date() }
@@ -110,9 +130,10 @@ export const validerPaiementChargePartielle = async (req, res) => {
 
 export const getEssentialCharge = async (req, res) => {
   try {
-    let setting = await prisma.setting.findUnique({ where: { key: 'CHARGE_ESSENTIELLE' } });
+    const key = `CHARGE_ESSENTIELLE_${req.user.id}`;
+    let setting = await prisma.setting.findUnique({ where: { key } });
     if (!setting) {
-      setting = await prisma.setting.create({ data: { key: 'CHARGE_ESSENTIELLE', value: '100' } });
+      setting = await prisma.setting.create({ data: { key, value: '100' } });
     }
     res.json(setting);
   } catch (error) {
@@ -123,14 +144,16 @@ export const getEssentialCharge = async (req, res) => {
 export const updateEssentialCharge = async (req, res) => {
   try {
     const { value } = req.body;
+    const key = `CHARGE_ESSENTIELLE_${req.user.id}`;
     const updated = await prisma.setting.upsert({
-      where: { key: 'CHARGE_ESSENTIELLE' },
+      where: { key },
       update: { value: value.toString() },
-      create: { key: 'CHARGE_ESSENTIELLE', value: value.toString() }
+      create: { key, value: value.toString() }
     });
 
     // Mettre à jour tous les appartements pour avoir la même charge mensuelle
     await prisma.appartement.updateMany({
+      where: { syndicId: req.user.id },
       data: { chargesMensuelles: parseFloat(value) }
     });
 

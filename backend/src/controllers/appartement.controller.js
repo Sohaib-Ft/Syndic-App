@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 export const getAllAppartements = async (req, res) => {
   try {
     const appartements = await prisma.appartement.findMany({
+      where: { syndicId: req.user.id },
       include: { resident: { select: { id: true, nom: true, prenom: true, email: true, telephone: true } } },
       orderBy: { numero: 'asc' }
     });
@@ -19,8 +20,8 @@ export const getAllAppartements = async (req, res) => {
 // GET /api/appartements/:id
 export const getAppartementById = async (req, res) => {
   try {
-    const appartement = await prisma.appartement.findUnique({
-      where: { id: parseInt(req.params.id) },
+    const appartement = await prisma.appartement.findFirst({
+      where: { id: parseInt(req.params.id), syndicId: req.user.id },
       include: {
         resident: { select: { id: true, nom: true, prenom: true, email: true, telephone: true } },
         paiements: { orderBy: { createdAt: 'desc' }, take: 12 }
@@ -43,11 +44,22 @@ export const createAppartement = async (req, res) => {
       return res.status(400).json({ message: 'Champs obligatoires manquants.' });
     }
 
-    const existing = await prisma.appartement.findUnique({ where: { numero } });
+    const existing = await prisma.appartement.findFirst({
+      where: { syndicId: req.user.id, numero }
+    });
     if (existing) return res.status(400).json({ message: 'Ce numéro d\'appartement existe déjà.' });
 
     const appartement = await prisma.appartement.create({
-      data: { numero, etage: parseInt(etage), superficie: parseFloat(superficie) || 0, nbPieces: parseInt(nbPieces), type, description, chargesMensuelles: parseFloat(chargesMensuelles) || 0 }
+      data: {
+        numero,
+        etage: parseInt(etage),
+        superficie: parseFloat(superficie) || 0,
+        nbPieces: parseInt(nbPieces),
+        type,
+        description,
+        chargesMensuelles: parseFloat(chargesMensuelles) || 0,
+        syndicId: req.user.id
+      }
     });
 
     res.status(201).json({ message: 'Appartement créé avec succès.', appartement });
@@ -63,11 +75,15 @@ export const updateAppartement = async (req, res) => {
     const { id } = req.params;
     const { numero, etage, superficie, nbPieces, type, description, chargesMensuelles } = req.body;
 
-    const appartement = await prisma.appartement.findUnique({ where: { id: parseInt(id) } });
+    const appartement = await prisma.appartement.findFirst({
+      where: { id: parseInt(id), syndicId: req.user.id }
+    });
     if (!appartement) return res.status(404).json({ message: 'Appartement non trouvé.' });
 
     if (numero && numero !== appartement.numero) {
-      const existing = await prisma.appartement.findUnique({ where: { numero } });
+      const existing = await prisma.appartement.findFirst({
+        where: { syndicId: req.user.id, numero }
+      });
       if (existing) return res.status(400).json({ message: 'Ce numéro existe déjà.' });
     }
 
@@ -96,8 +112,8 @@ export const updateAppartement = async (req, res) => {
 export const deleteAppartement = async (req, res) => {
   try {
     const { id } = req.params;
-    const appartement = await prisma.appartement.findUnique({
-      where: { id: parseInt(id) },
+    const appartement = await prisma.appartement.findFirst({
+      where: { id: parseInt(id), syndicId: req.user.id },
       include: { resident: true }
     });
     if (!appartement) return res.status(404).json({ message: 'Appartement non trouvé.' });

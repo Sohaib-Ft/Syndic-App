@@ -3,8 +3,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 
 const prisma = new PrismaClient();
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -26,6 +28,139 @@ const buildResetUrl = (email, token) => {
   return url.toString();
 };
 
+// POST /api/auth/google
+export const googleAuth = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: 'Token Google manquant.' });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const email = payload.email;
+    const googleId = payload.sub;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email introuvable dans le token Google.' });
+    }
+
+    let user = await prisma.user.findUnique({
+      where: { email },
+      include: { appartement: true }
+    });
+
+    if (!user) {
+      // Auto-register new users as SYNDIC
+      const dummyPassword = crypto.randomBytes(16).toString('hex');
+      const hashedPassword = await bcrypt.hash(dummyPassword, 10);
+      user = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          nom: payload.family_name || 'Syndic',
+          prenom: payload.given_name || 'Nouveau',
+          role: 'SYNDIC',
+          googleId,
+          authProvider: 'google',
+          actif: true
+        },
+        include: { appartement: true }
+      });
+    } else {
+      if (!user.actif) {
+        return res.status(403).json({ message: 'Compte désactivé. Contactez l\'administrateur.' });
+      }
+
+      if (user.role !== 'SYNDIC') {
+        return res.status(403).json({ message: 'Accès réservé au syndic.' });
+      }
+
+      // Lier automatiquement le compte Google si ce n'est pas déjà fait
+      if (!user.googleId) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { googleId, authProvider: 'google' },
+          include: { appartement: true }
+        });
+      }
+    }
+
+    const jwtToken = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' } // Expiration à 7 jours selon le prompt
+    );
+
+    const { password: _, ...userWithoutPassword } = user;
+
+    res.json({
+      message: 'Connexion Google réussie',
+      token: jwtToken,
+      user: {
+        ...userWithoutPassword,
+        googleId,
+        authProvider: 'google',
+      }
+    });
+  } catch (error) {
+    console.error('Erreur googleAuth:', error);
+    res.status(500).json({ message: 'Erreur lors de la vérification Google.' });
+  }
+};
+
+// POST /api/auth/register
+export const register = async (req, res) => {
+  try {
+    const { email, password, nomComplet } = req.body;
+    if (!email || !password || !nomComplet) {
+      return res.status(400).json({ message: 'Tous les champs sont requis.' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Cet email est déjà utilisé.' });
+    }
+
+    const parts = nomComplet.trim().split(' ');
+    const prenom = parts[0] || 'Syndic';
+    const nom = parts.slice(1).join(' ') || 'Pro';
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        nom,
+        prenom,
+        role: 'SYNDIC',
+        authProvider: 'local',
+        actif: true
+      }
+    });
+
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    const { password: _, ...userWithoutPassword } = user;
+    res.status(201).json({
+      message: 'Inscription réussie',
+      token,
+      user: userWithoutPassword
+    });
+  } catch (error) {
+    console.error('Erreur register:', error);
+    res.status(500).json({ message: 'Erreur serveur lors de l\'inscription.' });
+  }
+};
+
 // POST /api/auth/login
 export const login = async (req, res) => {
   try {
@@ -42,6 +177,10 @@ export const login = async (req, res) => {
 
     if (!user) {
       return res.status(401).json({ message: 'Email ou mot de passe incorrect.' });
+    }
+
+    if (user.authProvider === 'google') {
+      return res.status(400).json({ message: 'Utilisez le bouton Google pour vous connecter.' });
     }
 
     if (!user.actif) {

@@ -17,7 +17,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const isLoginRequest = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/google') || error.config?.url?.includes('/auth/register');
+    if (error.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
@@ -29,6 +30,8 @@ api.interceptors.response.use(
 // ==================== AUTH ====================
 export const authAPI = {
   login: (data) => api.post('/auth/login', data),
+  register: (data) => api.post('/auth/register', data),
+  googleLogin: (token) => api.post('/auth/google', { token }),
   forgotPassword: (data) => api.post('/auth/forgot-password', data),
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
@@ -63,15 +66,6 @@ export const paiementAPI = {
   statsMensuel: () => api.get('/paiements/stats/mensuel'),
   statsAnnuel: (annee) => api.get('/paiements/stats/annuel', { params: { annee } }),
   generer: (data) => api.post('/paiements/generer', data),
-};
-
-// ==================== ANNONCES ====================
-export const annonceAPI = {
-  getAll: () => api.get('/annonces'),
-  getById: (id) => api.get(`/annonces/${id}`),
-  create: (data) => api.post('/annonces', data),
-  update: (id, data) => api.put(`/annonces/${id}`, data),
-  delete: (id) => api.delete(`/annonces/${id}`),
 };
 
 // ==================== CHARGES ====================

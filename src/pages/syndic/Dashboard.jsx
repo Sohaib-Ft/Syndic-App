@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { dashboardAPI, paiementAPI } from '../../services/api';
 import { useLang } from '../../contexts/LangContext';
-import { Building2, Users, CreditCard, AlertTriangle, TrendingUp, Megaphone, CheckCircle, Clock } from 'lucide-react';
+import { Building2, Users, CreditCard, AlertTriangle, TrendingUp, CheckCircle, Clock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import toast from 'react-hot-toast';
 
@@ -56,47 +56,21 @@ export default function SyndicDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-[#1e3a5f]" /> {t.paymentsLast12}
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={statsChart}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => `${v.toLocaleString(dateLocale)} DH`} />
-              <Legend />
-              <Bar dataKey="totalAttendu" fill="#cbd5e1" name={t.expected} radius={[4,4,0,0]} />
-              <Bar dataKey="totalPaye" fill="#1e3a5f" name={t.received} radius={[4,4,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <Megaphone className="w-5 h-5 text-[#1e3a5f]" /> {t.latestAnnouncements}
-          </h3>
-          <div className="space-y-3">
-            {data.dernieresAnnonces.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-8">{t.noAnnouncement}</p>
-            ) : data.dernieresAnnonces.map((a) => {
-              const catColors = { INFO: 'bg-blue-100 text-blue-700', URGENT: 'bg-red-100 text-red-700', TRAVAUX: 'bg-amber-100 text-amber-700', ASSEMBLEE: 'bg-purple-100 text-purple-700' };
-              return (
-                <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full shrink-0 ${catColors[a.categorie] || 'bg-slate-100 text-slate-600'}`}>
-                    {a.categorie === 'INFO' ? t.information : a.categorie === 'URGENT' ? t.urgent : a.categorie === 'TRAVAUX' ? t.works : a.categorie === 'ASSEMBLEE' ? t.assembly : a.categorie}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-700 truncate">{a.titre}</p>
-                    <p className="text-xs text-slate-400">{new Date(a.createdAt).toLocaleDateString(dateLocale)}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-[#1e3a5f]" /> {t.paymentsLast12}
+        </h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={statsChart}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} />
+            <Tooltip formatter={(v) => `${v.toLocaleString(dateLocale)} DH`} />
+            <Legend />
+            <Bar dataKey="totalAttendu" fill="#cbd5e1" name={t.expected} radius={[4,4,0,0]} />
+            <Bar dataKey="totalPaye" fill="#1e3a5f" name={t.received} radius={[4,4,0,0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

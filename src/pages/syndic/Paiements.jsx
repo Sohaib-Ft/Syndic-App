@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { paiementAPI, residentChargeAPI, chargeAPI } from '../../services/api';
 import { useLang } from '../../contexts/LangContext';
-import { CreditCard, Check, Filter, TrendingUp, Search, Settings, X, Wallet, Users, PiggyBank, Printer } from 'lucide-react';
+import { CreditCard, Check, Filter, TrendingUp, Search, Settings, X, Wallet, Users, PiggyBank, Printer, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useReactToPrint } from 'react-to-print';
+import html2pdf from 'html2pdf.js';
 import toast from 'react-hot-toast';
 
 export default function Paiements() {
@@ -24,19 +25,56 @@ export default function Paiements() {
   const [essentialAmount, setEssentialAmount] = useState('');
   
   const [printingPayment, setPrintingPayment] = useState(null);
+  const [printMode, setPrintMode] = useState(null);
   const printRef = useRef(null);
 
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     documentTitle: `Recu_Paiement`,
-    onAfterPrint: () => setPrintingPayment(null)
+    onAfterPrint: () => {
+      setPrintingPayment(null);
+      setPrintMode(null);
+    }
   });
+
+  useEffect(() => {
+    if (!printingPayment || !printMode) return;
+    const timer = setTimeout(() => {
+      if (!printRef.current) return;
+      if (printMode === 'print') {
+        handlePrint();
+        return;
+      }
+      if (printMode === 'pdf') {
+        const filename = `Recu_Paiement_${printingPayment.resident.nom}_${printingPayment.resident.prenom}_${printingPayment.mois}-${printingPayment.annee}.pdf`;
+        html2pdf()
+          .set({
+            margin: 10,
+            filename,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          })
+          .from(printRef.current)
+          .save()
+          .catch(() => toast.error(t.error))
+          .finally(() => {
+            setPrintingPayment(null);
+            setPrintMode(null);
+          });
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [printingPayment, printMode, handlePrint, t.error]);
 
   const triggerPrint = (p) => {
     setPrintingPayment(p);
-    setTimeout(() => {
-      handlePrint();
-    }, 100);
+    setPrintMode('print');
+  };
+
+  const triggerPdf = (p) => {
+    setPrintingPayment(p);
+    setPrintMode('pdf');
   };
 
   useEffect(() => { loadData(); }, []);
@@ -248,9 +286,14 @@ export default function Paiements() {
                           </button>
                         )}
                         {p.statut === 'PAYE' && (
-                          <button onClick={() => triggerPrint(p)} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors" title="Imprimer le reçu">
-                            <Printer className="w-4 h-4" /> Imprimer
-                          </button>
+                          <>
+                            <button onClick={() => triggerPrint(p)} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors" title="Imprimer le reçu">
+                              <Printer className="w-4 h-4" /> Imprimer
+                            </button>
+                            <button onClick={() => triggerPdf(p)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors" title="Telecharger le PDF">
+                              <Download className="w-4 h-4" /> Telecharger PDF
+                            </button>
+                          </>
                         )}
                       </td>
                     </tr>
@@ -269,12 +312,15 @@ export default function Paiements() {
       )}
 
       {/* Hidden Print Receipt Template */}
-      <div className="hidden">
+      <div
+        className={printMode === 'pdf' ? '' : 'sr-only print:not-sr-only'}
+        style={printMode === 'pdf' ? { position: 'absolute', left: '-9999px', top: 0, width: '800px' } : undefined}
+      >
         {printingPayment && (
           <div ref={printRef} className="p-10 font-sans max-w-2xl mx-auto bg-white" style={{ color: '#1e3a5f' }}>
             <div className="text-center mb-10 pb-6 border-b-2 border-slate-200">
               <h1 className="text-4xl font-black mb-2 uppercase tracking-widest text-[#1e3a5f]">Reçu de Paiement</h1>
-              <p className="text-lg text-slate-500 font-medium">Syndicat de Copropriété</p>
+
             </div>
             
             <div className="flex justify-between items-start mb-12">
@@ -283,15 +329,12 @@ export default function Paiements() {
                 <p className="text-xl font-bold">{printingPayment.resident.prenom} {printingPayment.resident.nom}</p>
                 <p className="text-md text-slate-600 mt-1">Appartement n° {printingPayment.appartement.numero}</p>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Date d'édition</p>
-                <p className="text-lg font-bold">{new Date().toLocaleDateString('fr-FR')}</p>
-              </div>
+              
             </div>
 
             <div className="bg-slate-50 rounded-2xl p-8 mb-12 border border-slate-100">
               <div className="flex justify-between items-center mb-6 pb-6 border-b border-slate-200">
-                <span className="text-lg font-bold text-slate-600">Période concernée</span>
+                <span className="text-lg font-bold text-slate-600">Mois</span>
                 <span className="text-xl font-black capitalize">{t.months[printingPayment.mois]} {printingPayment.annee}</span>
               </div>
               <div className="flex justify-between items-center mb-6 pb-6 border-b border-slate-200">
@@ -299,15 +342,12 @@ export default function Paiements() {
                 <span className="text-xl font-black">{printingPayment.datePaiement ? new Date(printingPayment.datePaiement).toLocaleDateString('fr-FR') : '-'}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-2xl font-black text-[#1e3a5f] uppercase">Montant Total Payé</span>
+                <span className="text-2xl font-black text-[#1e3a5f] uppercase">Montant </span>
                 <span className="text-3xl font-black text-emerald-600">{printingPayment.montant.toLocaleString('fr-FR')} DH</span>
               </div>
             </div>
 
-            <div className="mt-16 text-center text-slate-500 text-sm">
-              <p>Ce reçu est généré informatiquement et fait office de preuve de paiement.</p>
-              <p className="mt-2 font-bold">Merci de votre confiance.</p>
-            </div>
+            
           </div>
         )}
       </div>

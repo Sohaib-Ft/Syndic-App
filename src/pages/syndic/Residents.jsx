@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { residentAPI, appartementAPI } from '../../services/api';
 import { useLang } from '../../contexts/LangContext';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Users, Plus, Edit, Trash2, Search, Eye, Mail, Phone, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -60,46 +61,46 @@ export default function Residents() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead><tr className="bg-slate-50 border-b border-slate-100">
+        <Table>
+          <TableHeader className="bg-slate-50">
+            <TableRow>
               {[t.resident, t.residentType, t.phone, t.apartment, t.status, t.actions].map(h => (
-                <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
+                <TableHead key={h} className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</TableHead>
               ))}
-            </tr></thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-xs font-bold text-white">
-                        {(r.prenom?.[0] || '').toUpperCase()}{(r.nom?.[0] || '').toUpperCase()}
-                      </div>
-                      <span className="font-medium text-sm text-slate-800">{r.prenom} {r.nom}</span>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-slate-100">
+            {filtered.map((r) => (
+              <TableRow key={r.id} className="hover:bg-slate-50/50 transition-colors">
+                <TableCell className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-xs font-bold text-white">
+                      {(r.prenom?.[0] || '').toUpperCase()}{(r.nom?.[0] || '').toUpperCase()}
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${r.typeResident === 'LOCATAIRE' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {r.typeResident === 'LOCATAIRE' ? t.tenant : t.owner}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{r.telephone || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{r.appartement ? r.appartement.numero : <span className="text-slate-400">{t.notAssigned}</span>}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${r.actif ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{r.actif ? t.active : t.inactive}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => openDetail(r)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"><Eye className="w-4 h-4" /></button>
-                      <button onClick={() => openEdit(r)} className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors"><Edit className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(r.id)} className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    <span className="font-medium text-sm text-slate-800">{r.prenom} {r.nom}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4">
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${r.typeResident === 'LOCATAIRE' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                    {r.typeResident === 'LOCATAIRE' ? t.tenant : t.owner}
+                  </span>
+                </TableCell>
+                <TableCell className="px-6 py-4 text-sm text-slate-600">{r.telephone || '-'}</TableCell>
+                <TableCell className="px-6 py-4 text-sm text-slate-600">{r.appartement ? r.appartement.numero : <span className="text-slate-400">{t.notAssigned}</span>}</TableCell>
+                <TableCell className="px-6 py-4">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${r.actif ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{r.actif ? t.active : t.inactive}</span>
+                </TableCell>
+                <TableCell className="px-6 py-4">
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => openDetail(r)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"><Eye className="w-4 h-4" /></button>
+                    <button onClick={() => openEdit(r)} className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors"><Edit className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(r.id)} className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
         {filtered.length === 0 && <div className="text-center py-12 text-slate-400"><Users className="w-12 h-12 mx-auto mb-3 opacity-50" /><p>{t.notAssigned}</p></div>}
       </div>
 

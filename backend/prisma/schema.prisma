@@ -24,17 +24,29 @@ model User {
   resetToken    String?
   resetTokenExpiry DateTime?
   mustChangePassword Boolean @default(false)
+  googleId      String?      @unique
+  authProvider  String       @default("local") // "local" | "google"
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   appartement   Appartement? @relation(fields: [appartementId], references: [id])
   appartementId Int?         @unique
   paiements     Paiement[]
   chargesPartielles ChargePartielleResident[]
+  
+  // Relation to link Resident to Syndic
+  syndicId      Int?
+  syndic        User?        @relation("SyndicResidents", fields: [syndicId], references: [id], onDelete: Cascade)
+  residents     User[]       @relation("SyndicResidents")
+  
+  // Relation to link Syndic to other owned entities
+  appartementsOwned Appartement[] @relation("SyndicAppartements")
+  chargesOwned       Charge[]      @relation("SyndicCharges")
+  chargesPartiellesOwned ChargePartielle[] @relation("SyndicChargePartielles")
 }
 
 model Appartement {
   id                Int          @id @default(autoincrement())
-  numero            String       @unique
+  numero            String
   etage             Int
   superficie        Float
   nbPieces          Int
@@ -46,6 +58,11 @@ model Appartement {
   paiements         Paiement[]
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
+
+  syndicId          Int?
+  syndic            User?        @relation("SyndicAppartements", fields: [syndicId], references: [id], onDelete: Cascade)
+
+  @@unique([syndicId, numero])
 }
 
 model Paiement {
@@ -65,21 +82,6 @@ model Paiement {
   @@unique([appartementId, mois, annee])
 }
 
-model Annonce {
-  id        Int              @id @default(autoincrement())
-  titre     String
-  titreFr   String?
-  titreEn   String?
-  titreAr   String?
-  contenu   String
-  contenuFr String?
-  contenuEn String?
-  contenuAr String?
-  categorie String           // "INFO" | "URGENT" | "TRAVAUX" | "ASSEMBLEE"
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-}
-
 model Charge {
   id          Int             @id @default(autoincrement())
   libelle     String
@@ -89,6 +91,9 @@ model Charge {
   description String?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+
+  syndicId    Int?
+  syndic      User?            @relation("SyndicCharges", fields: [syndicId], references: [id], onDelete: Cascade)
 }
 
 // Nouvelles charges pour les résidents
@@ -102,6 +107,9 @@ model ChargePartielle {
   residents   ChargePartielleResident[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+
+  syndicId    Int?
+  syndic      User?            @relation("SyndicChargePartielles", fields: [syndicId], references: [id], onDelete: Cascade)
 }
 
 model ChargePartielleResident {

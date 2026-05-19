@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLang } from '../contexts/LangContext';
 import {
-  LayoutDashboard, Building2, Users, CreditCard, Megaphone, Receipt,
+  LayoutDashboard, Building2, Users, CreditCard, Receipt,
   LogOut, Menu, X, ChevronRight, Building, Globe
 } from 'lucide-react';
 
@@ -22,7 +22,6 @@ export default function Layout() {
     { path: '/syndic/appartements', label: t.apartments, icon: Building2 },
     { path: '/syndic/residents', label: t.residents, icon: Users },
     { path: '/syndic/paiements', label: t.payments, icon: CreditCard },
-    { path: '/syndic/annonces', label: t.announcements, icon: Megaphone },
     { path: '/syndic/charges', label: t.charges, icon: Receipt },
   ];
 

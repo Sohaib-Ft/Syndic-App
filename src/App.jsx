@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import ResetPassword from './pages/ResetPassword';
 import ChangePassword from './pages/ChangePassword';
 import Layout from './components/Layout';
@@ -10,8 +11,6 @@ import AppartementForm from './pages/syndic/AppartementForm';
 import Residents from './pages/syndic/Residents';
 import ResidentForm from './pages/syndic/ResidentForm';
 import Paiements from './pages/syndic/Paiements';
-import Annonces from './pages/syndic/Annonces';
-import AnnonceForm from './pages/syndic/AnnonceForm';
 import Charges from './pages/syndic/Charges';
 import ChargeForm from './pages/syndic/ChargeForm';
 
@@ -32,7 +31,8 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/syndic" /> : <Login />} />
-      <Route path="/reset-password/:id/:token" element={<ResetPassword />} />
+      <Route path="/register" element={isAuthenticated ? <Navigate to="/syndic" /> : <Register />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/change-password" element={isAuthenticated ? <ChangePassword /> : <Navigate to="/login" />} />
 
       {/* Routes Syndic */}
@@ -45,9 +45,6 @@ function App() {
         <Route path="residents/nouveau" element={<ResidentForm />} />
         <Route path="residents/edit/:id" element={<ResidentForm />} />
         <Route path="paiements" element={<Paiements />} />
-        <Route path="annonces" element={<Annonces />} />
-        <Route path="annonces/nouveau" element={<AnnonceForm />} />
-        <Route path="annonces/edit/:id" element={<AnnonceForm />} />
         <Route path="charges" element={<Charges />} />
         <Route path="charges/nouveau" element={<ChargeForm />} />
         <Route path="charges/edit/:id" element={<ChargeForm />} />

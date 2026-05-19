@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 export const getAllResidents = async (req, res) => {
   try {
     const residents = await prisma.user.findMany({
-      where: { role: 'RESIDENT' },
+      where: { role: 'RESIDENT', syndicId: req.user.id },
       select: {
         id: true, nom: true, prenom: true, email: true, telephone: true, typeResident: true, actif: true, createdAt: true,
         appartement: { select: { id: true, numero: true, etage: true, superficie: true } }
@@ -24,14 +24,14 @@ export const getAllResidents = async (req, res) => {
 // GET /api/residents/:id
 export const getResidentById = async (req, res) => {
   try {
-    const resident = await prisma.user.findUnique({
-      where: { id: parseInt(req.params.id) },
+    const resident = await prisma.user.findFirst({
+      where: { id: parseInt(req.params.id), role: 'RESIDENT', syndicId: req.user.id },
       include: {
         appartement: true,
         paiements: { orderBy: { createdAt: 'desc' }, take: 12, include: { appartement: { select: { numero: true } } } }
       }
     });
-    if (!resident || resident.role !== 'RESIDENT') return res.status(404).json({ message: 'Résident non trouvé.' });
+    if (!resident) return res.status(404).json({ message: 'Résident non trouvé.' });
 
     const { password: _, ...data } = resident;
     res.json(data);
@@ -56,7 +56,10 @@ export const createResident = async (req, res) => {
     if (existing) return res.status(400).json({ message: 'Cet email est déjà utilisé.' });
 
     if (appartementId) {
-      const appart = await prisma.appartement.findUnique({ where: { id: parseInt(appartementId) }, include: { resident: true } });
+      const appart = await prisma.appartement.findFirst({
+        where: { id: parseInt(appartementId), syndicId: req.user.id },
+        include: { resident: true }
+      });
       if (!appart) return res.status(400).json({ message: 'Appartement non trouvé.' });
       if (appart.resident) return res.status(400).json({ message: 'Cet appartement est déjà occupé.' });
     }
@@ -68,6 +71,7 @@ export const createResident = async (req, res) => {
       data: {
         nom, prenom, email: uniqueEmail, telephone, typeResident, password: hashedPassword, role: 'RESIDENT',
         mustChangePassword: false,
+        syndicId: req.user.id,
         ...(appartementId && { appartementId: parseInt(appartementId) })
       },
       include: { appartement: true }
@@ -92,8 +96,10 @@ export const updateResident = async (req, res) => {
     const { id } = req.params;
     const { nom, prenom, email, telephone, typeResident, appartementId, actif } = req.body;
 
-    const resident = await prisma.user.findUnique({ where: { id: parseInt(id) } });
-    if (!resident || resident.role !== 'RESIDENT') return res.status(404).json({ message: 'Résident non trouvé.' });
+    const resident = await prisma.user.findFirst({
+      where: { id: parseInt(id), role: 'RESIDENT', syndicId: req.user.id }
+    });
+    if (!resident) return res.status(404).json({ message: 'Résident non trouvé.' });
 
     if (email && email !== resident.email) {
       const existing = await prisma.user.findUnique({ where: { email } });
@@ -108,7 +114,10 @@ export const updateResident = async (req, res) => {
       }
       // Occuper le nouveau
       if (appartementId) {
-        const appart = await prisma.appartement.findUnique({ where: { id: parseInt(appartementId) }, include: { resident: true } });
+        const appart = await prisma.appartement.findFirst({
+          where: { id: parseInt(appartementId), syndicId: req.user.id },
+          include: { resident: true }
+        });
         if (!appart) return res.status(400).json({ message: 'Appartement non trouvé.' });
         if (appart.resident && appart.resident.id !== parseInt(id)) return res.status(400).json({ message: 'Appartement déjà occupé.' });
         await prisma.appartement.update({ where: { id: parseInt(appartementId) }, data: { statut: 'OCCUPE' } });
@@ -141,8 +150,10 @@ export const updateResident = async (req, res) => {
 export const deleteResident = async (req, res) => {
   try {
     const { id } = req.params;
-    const resident = await prisma.user.findUnique({ where: { id: parseInt(id) } });
-    if (!resident || resident.role !== 'RESIDENT') return res.status(404).json({ message: 'Résident non trouvé.' });
+    const resident = await prisma.user.findFirst({
+      where: { id: parseInt(id), role: 'RESIDENT', syndicId: req.user.id }
+    });
+    if (!resident) return res.status(404).json({ message: 'Résident non trouvé.' });
 
     // Libérer l'appartement
     if (resident.appartementId) {
@@ -163,6 +174,11 @@ export const deleteResident = async (req, res) => {
 // GET /api/residents/:id/paiements
 export const getResidentPaiements = async (req, res) => {
   try {
+    const resident = await prisma.user.findFirst({
+      where: { id: parseInt(req.params.id), role: 'RESIDENT', syndicId: req.user.id }
+    });
+    if (!resident) return res.status(404).json({ message: 'Résident non trouvé.' });
+
     const paiements = await prisma.paiement.findMany({
       where: { residentId: parseInt(req.params.id) },
       include: { appartement: { select: { numero: true } } },

@@ -8,88 +8,6 @@ const getLang = (req) => {
   return ['fr', 'en', 'ar'].includes(lang) ? lang : 'fr';
 };
 
-const localizeAnnonce = (annonce, lang) => {
-  const fallbackTitle = annonce.titreFr || annonce.titre;
-  const fallbackContent = annonce.contenuFr || annonce.contenu;
-
-  const titre = lang === 'ar'
-    ? (annonce.titreAr || fallbackTitle)
-    : lang === 'en'
-      ? (annonce.titreEn || fallbackTitle)
-      : (annonce.titreFr || fallbackTitle);
-
-  const contenu = lang === 'ar'
-    ? (annonce.contenuAr || fallbackContent)
-    : lang === 'en'
-      ? (annonce.contenuEn || fallbackContent)
-      : (annonce.contenuFr || fallbackContent);
-
-  return { ...annonce, titre, contenu };
-};
-
-const supportedLangs = ['fr', 'en', 'ar'];
-
-const getDeepLUrl = () => {
-  if (process.env.DEEPL_API_URL) return process.env.DEEPL_API_URL;
-  const key = process.env.DEEPL_API_KEY || '';
-  return key.endsWith(':fx')
-    ? 'https://api-free.deepl.com/v2/translate'
-    : 'https://api.deepl.com/v2/translate';
-};
-
-const translateTexts = async (texts, targetLang) => {
-  const params = new URLSearchParams();
-  params.set('auth_key', process.env.DEEPL_API_KEY);
-  params.set('target_lang', targetLang.toUpperCase());
-  texts.forEach((text) => params.append('text', text));
-
-  const response = await fetch(getDeepLUrl(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`DeepL error: ${response.status} ${body}`);
-  }
-
-  const data = await response.json();
-  return data.translations.map((item) => item.text);
-};
-
-const hasTranslation = (annonce, lang) => {
-  if (lang === 'fr') return Boolean(annonce.titreFr && annonce.contenuFr);
-  if (lang === 'en') return Boolean(annonce.titreEn && annonce.contenuEn);
-  if (lang === 'ar') return Boolean(annonce.titreAr && annonce.contenuAr);
-  return true;
-};
-
-const autoTranslateAnnonce = async (annonce, lang) => {
-  try {
-    if (!process.env.DEEPL_API_KEY) return annonce;
-    if (!supportedLangs.includes(lang)) return annonce;
-    if (hasTranslation(annonce, lang)) return annonce;
-
-    const sourceTitle = annonce.titreFr || annonce.titreEn || annonce.titreAr || annonce.titre;
-    const sourceContent = annonce.contenuFr || annonce.contenuEn || annonce.contenuAr || annonce.contenu;
-
-    if (!sourceTitle || !sourceContent) return annonce;
-
-    const [tTitle, tContent] = await translateTexts([sourceTitle, sourceContent], lang);
-    const data = lang === 'fr'
-      ? { titreFr: tTitle, contenuFr: tContent }
-      : lang === 'en'
-        ? { titreEn: tTitle, contenuEn: tContent }
-        : { titreAr: tTitle, contenuAr: tContent };
-
-    return await prisma.annonce.update({ where: { id: annonce.id }, data });
-  } catch (error) {
-    console.error('Erreur autoTranslateAnnonce:', error);
-    return annonce;
-  }
-};
-
 export const getDashboardSyndic = async (req, res) => {
   try {
     const lang = getLang(req);
@@ -97,26 +15,34 @@ export const getDashboardSyndic = async (req, res) => {
     const moisActuel = now.getMonth() + 1;
     const anneeActuelle = now.getFullYear();
 
-    const [totalApparts, residentsActifs, paiementsMois, impayesMois, derniersPaiements, residentsEnRetard, dernieresAnnonces] = await Promise.all([
-      prisma.appartement.count(),
-      prisma.user.count({ where: { role: 'RESIDENT', actif: true } }),
-      prisma.paiement.aggregate({ where: { mois: moisActuel, annee: anneeActuelle, statut: 'PAYE' }, _sum: { montant: true } }),
-      prisma.paiement.aggregate({ where: { mois: moisActuel, annee: anneeActuelle, statut: { not: 'PAYE' } }, _sum: { montant: true }, _count: true }),
+    const [totalApparts, residentsActifs, paiementsMois, impayesMois, derniersPaiements, residentsEnRetard] = await Promise.all([
+      prisma.appartement.count({ where: { syndicId: req.user.id } }),
+      prisma.user.count({ where: { role: 'RESIDENT', actif: true, syndicId: req.user.id } }),
+      prisma.paiement.aggregate({
+        where: { mois: moisActuel, annee: anneeActuelle, statut: 'PAYE', appartement: { syndicId: req.user.id } },
+        _sum: { montant: true }
+      }),
+      prisma.paiement.aggregate({
+        where: { mois: moisActuel, annee: anneeActuelle, statut: { not: 'PAYE' }, appartement: { syndicId: req.user.id } },
+        _sum: { montant: true },
+        _count: true
+      }),
       prisma.paiement.findMany({
-        where: { statut: 'PAYE' }, orderBy: { datePaiement: 'desc' }, take: 5,
+        where: { statut: 'PAYE', appartement: { syndicId: req.user.id } },
+        orderBy: { datePaiement: 'desc' },
+        take: 5,
         include: { resident: { select: { nom: true, prenom: true } }, appartement: { select: { numero: true } } }
       }),
       prisma.paiement.findMany({
-        where: { statut: { not: 'PAYE' }, OR: [{ annee: anneeActuelle, mois: { lt: moisActuel } }, { annee: { lt: anneeActuelle } }] },
+        where: {
+          statut: { not: 'PAYE' },
+          appartement: { syndicId: req.user.id },
+          OR: [{ annee: anneeActuelle, mois: { lt: moisActuel } }, { annee: { lt: anneeActuelle } }]
+        },
         include: { resident: { select: { id: true, nom: true, prenom: true, email: true } }, appartement: { select: { numero: true } } },
         orderBy: [{ annee: 'asc' }, { mois: 'asc' }]
-      }),
-      prisma.annonce.findMany({ orderBy: { createdAt: 'desc' }, take: 5 })
+      })
     ]);
-
-    const translatedDernieres = await Promise.all(
-      dernieresAnnonces.map((annonce) => autoTranslateAnnonce(annonce, lang))
-    );
 
     res.json({
       kpis: {
@@ -127,8 +53,7 @@ export const getDashboardSyndic = async (req, res) => {
         nbImpayes: impayesMois._count || 0
       },
       derniersPaiements,
-      residentsEnRetard,
-      dernieresAnnonces: translatedDernieres.map((annonce) => localizeAnnonce(annonce, lang))
+      residentsEnRetard
     });
   } catch (error) {
     console.error('Erreur getDashboardSyndic:', error);

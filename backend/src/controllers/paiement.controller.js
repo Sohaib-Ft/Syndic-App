@@ -6,7 +6,9 @@ const prisma = new PrismaClient();
 export const getAllPaiements = async (req, res) => {
   try {
     const { mois, annee, statut } = req.query;
-    const where = {};
+    const where = {
+      appartement: { syndicId: req.user.id }
+    };
     if (mois) where.mois = parseInt(mois);
     if (annee) where.annee = parseInt(annee);
     if (statut) where.statut = statut;
@@ -34,6 +36,16 @@ export const createPaiement = async (req, res) => {
     if (!montant || !mois || !annee || !appartementId || !residentId) {
       return res.status(400).json({ message: 'Champs obligatoires manquants.' });
     }
+
+    const appart = await prisma.appartement.findFirst({
+      where: { id: parseInt(appartementId), syndicId: req.user.id }
+    });
+    if (!appart) return res.status(400).json({ message: 'Appartement non trouvé.' });
+
+    const resident = await prisma.user.findFirst({
+      where: { id: parseInt(residentId), role: 'RESIDENT', syndicId: req.user.id }
+    });
+    if (!resident) return res.status(400).json({ message: 'Résident non trouvé.' });
 
     const existing = await prisma.paiement.findUnique({
       where: { appartementId_mois_annee: { appartementId: parseInt(appartementId), mois: parseInt(mois), annee: parseInt(annee) } }
@@ -66,7 +78,9 @@ export const createPaiement = async (req, res) => {
 export const validerPaiement = async (req, res) => {
   try {
     const { id } = req.params;
-    const paiement = await prisma.paiement.findUnique({ where: { id: parseInt(id) } });
+    const paiement = await prisma.paiement.findFirst({
+      where: { id: parseInt(id), appartement: { syndicId: req.user.id } }
+    });
     if (!paiement) return res.status(404).json({ message: 'Paiement non trouvé.' });
 
     const updated = await prisma.paiement.update({
@@ -97,8 +111,14 @@ export const getStatsMensuel = async (req, res) => {
       const annee = date.getFullYear();
 
       const [totalPaye, totalAttendu] = await Promise.all([
-        prisma.paiement.aggregate({ where: { mois, annee, statut: 'PAYE' }, _sum: { montant: true } }),
-        prisma.paiement.aggregate({ where: { mois, annee }, _sum: { montant: true } })
+        prisma.paiement.aggregate({
+          where: { mois, annee, statut: 'PAYE', appartement: { syndicId: req.user.id } },
+          _sum: { montant: true }
+        }),
+        prisma.paiement.aggregate({
+          where: { mois, annee, appartement: { syndicId: req.user.id } },
+          _sum: { montant: true }
+        })
       ]);
 
       const moisNoms = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -124,9 +144,18 @@ export const getStatsAnnuel = async (req, res) => {
     const annee = parseInt(req.query.annee) || new Date().getFullYear();
 
     const [totalPaye, totalAttendu, impayes] = await Promise.all([
-      prisma.paiement.aggregate({ where: { annee, statut: 'PAYE' }, _sum: { montant: true } }),
-      prisma.paiement.aggregate({ where: { annee }, _sum: { montant: true } }),
-      prisma.paiement.aggregate({ where: { annee, statut: { not: 'PAYE' } }, _sum: { montant: true } })
+      prisma.paiement.aggregate({
+        where: { annee, statut: 'PAYE', appartement: { syndicId: req.user.id } },
+        _sum: { montant: true }
+      }),
+      prisma.paiement.aggregate({
+        where: { annee, appartement: { syndicId: req.user.id } },
+        _sum: { montant: true }
+      }),
+      prisma.paiement.aggregate({
+        where: { annee, statut: { not: 'PAYE' }, appartement: { syndicId: req.user.id } },
+        _sum: { montant: true }
+      })
     ]);
 
     const totalPayeVal = totalPaye._sum.montant || 0;
@@ -153,7 +182,7 @@ export const genererPaiementsMensuels = async (req, res) => {
     if (!mois || !annee) return res.status(400).json({ message: 'Mois et année requis.' });
 
     const appartements = await prisma.appartement.findMany({
-      where: { statut: 'OCCUPE' },
+      where: { statut: 'OCCUPE', syndicId: req.user.id },
       include: { resident: true }
     });
 
