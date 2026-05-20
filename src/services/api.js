@@ -4,8 +4,22 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({ baseURL: API_URL });
 
-// Intercepteur pour ajouter le token JWT
+const buildFullPath = (baseURL, relativeURL) => {
+  if (!baseURL) return relativeURL;
+  if (relativeURL.startsWith('http://') || relativeURL.startsWith('https://')) {
+    return relativeURL;
+  }
+  const cleanBase = baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
+  const cleanRelative = relativeURL.startsWith('/') ? relativeURL.substring(1) : relativeURL;
+  return `${cleanBase}/${cleanRelative}`;
+};
+
+// Intercepteur pour ajouter le token JWT et combiner les URLs de manière robuste
 api.interceptors.request.use((config) => {
+  if (config.baseURL) {
+    config.url = buildFullPath(config.baseURL, config.url);
+    config.baseURL = ''; // Reset baseURL pour éviter une double concaténation
+  }
   const token = localStorage.getItem('token');
   const lang = localStorage.getItem('syndic_lang');
   if (token) config.headers.Authorization = `Bearer ${token}`;
