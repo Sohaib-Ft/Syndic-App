@@ -81,7 +81,7 @@ export default function Appartements() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {[t.number, t.floor, t.type, t.rooms, t.chargesMonth, t.status, t.resident, t.actions].map(h => (
+                {[t.number, t.floor, t.type, t.status, t.resident, t.actions].map(h => (
                   <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -97,11 +97,6 @@ export default function Appartements() {
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600">{a.etage}e</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{a.type || '-'}</td>
-
-                  <td className="px-6 py-4 text-sm text-slate-600">{a.nbPieces}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-slate-700">
-                    {a.chargesMensuelles.toLocaleString('fr-FR')} DH
-                  </td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${a.statut === 'OCCUPE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
                       {a.statut === 'OCCUPE' ? t.occupied : t.vacant}

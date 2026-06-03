@@ -19,4 +19,4 @@ body {
 
 /* Toast styles */
 .toast-success { background: #10b981 !important; }
-.toast-error { background: #ef4444 !important; }
+.toast-error { background: #ef4444 !important;  }

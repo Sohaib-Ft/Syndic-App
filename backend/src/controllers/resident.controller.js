@@ -80,6 +80,39 @@ export const createResident = async (req, res) => {
     // Mettre à jour le statut de l'appartement
     if (appartementId) {
       await prisma.appartement.update({ where: { id: parseInt(appartementId) }, data: { statut: 'OCCUPE' } });
+
+      // Générer automatiquement le paiement pour le mois en cours
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+
+      const existingPayment = await prisma.paiement.findUnique({
+        where: {
+          appartementId_mois_annee: {
+            appartementId: parseInt(appartementId),
+            mois: currentMonth,
+            annee: currentYear
+          }
+        }
+      });
+
+      if (!existingPayment) {
+        await prisma.paiement.create({
+          data: {
+            montant: resident.appartement.chargesMensuelles || 0,
+            mois: currentMonth,
+            annee: currentYear,
+            appartementId: parseInt(appartementId),
+            residentId: resident.id,
+            statut: 'EN_ATTENTE'
+          }
+        });
+      } else {
+        await prisma.paiement.update({
+          where: { id: existingPayment.id },
+          data: { residentId: resident.id }
+        });
+      }
     }
 
     const { password: _, ...data } = resident;
@@ -121,6 +154,39 @@ export const updateResident = async (req, res) => {
         if (!appart) return res.status(400).json({ message: 'Appartement non trouvé.' });
         if (appart.resident && appart.resident.id !== parseInt(id)) return res.status(400).json({ message: 'Appartement déjà occupé.' });
         await prisma.appartement.update({ where: { id: parseInt(appartementId) }, data: { statut: 'OCCUPE' } });
+
+        // Générer ou lier automatiquement le paiement pour le mois en cours
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+
+        const existingPayment = await prisma.paiement.findUnique({
+          where: {
+            appartementId_mois_annee: {
+              appartementId: parseInt(appartementId),
+              mois: currentMonth,
+              annee: currentYear
+            }
+          }
+        });
+
+        if (!existingPayment) {
+          await prisma.paiement.create({
+            data: {
+              montant: appart.chargesMensuelles || 0,
+              mois: currentMonth,
+              annee: currentYear,
+              appartementId: parseInt(appartementId),
+              residentId: parseInt(id),
+              statut: 'EN_ATTENTE'
+            }
+          });
+        } else {
+          await prisma.paiement.update({
+            where: { id: existingPayment.id },
+            data: { residentId: parseInt(id) }
+          });
+        }
       }
     }
 

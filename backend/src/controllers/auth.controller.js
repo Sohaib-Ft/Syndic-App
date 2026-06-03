@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
-import { login, logout, getMe, forgotPassword, resetPassword, changePassword, googleAuth, register } from '../controllers/auth.controller.js';
 
 const prisma = new PrismaClient();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);

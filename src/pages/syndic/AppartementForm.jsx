@@ -17,10 +17,10 @@ export default function AppartementForm() {
     numero: '', 
     etage: '', 
     superficie: '0', 
-    nbPieces: '', 
+    nbPieces: '1', 
     type: '', 
     description: '', 
-    chargesMensuelles: '' 
+    chargesMensuelles: '0' 
   });
 
   useEffect(() => {
@@ -106,12 +106,7 @@ export default function AppartementForm() {
                 placeholder={t.exFloor} />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t.nbRooms} *</label>
-              <input required type="number" value={form.nbPieces} onChange={e => setForm({...form, nbPieces: e.target.value})} 
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#1e3a5f] focus:ring-2 focus:ring-[#1e3a5f]/20 outline-none text-sm transition-all bg-slate-50 focus:bg-white" 
-                placeholder={t.exRooms} />
-            </div>
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">{t.type}</label>
               <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} 
@@ -126,19 +121,6 @@ export default function AppartementForm() {
                 <option value="Duplex">Duplex</option>
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t.chargesMonthDH}</label>
-              <input type="number" value={form.chargesMensuelles} onChange={e => setForm({...form, chargesMensuelles: e.target.value})} 
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#1e3a5f] focus:ring-2 focus:ring-[#1e3a5f]/20 outline-none text-sm transition-all bg-slate-50 focus:bg-white" 
-                placeholder={t.exCharges} />
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t.description}</label>
-            <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={4} 
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#1e3a5f] focus:ring-2 focus:ring-[#1e3a5f]/20 outline-none text-sm transition-all bg-slate-50 focus:bg-white resize-none" 
-              placeholder={t.aptDetailsDesc} />
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
