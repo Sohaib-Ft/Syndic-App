@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { paiementAPI, residentChargeAPI, chargeAPI } from '../../services/api';
 import { useLang } from '../../contexts/LangContext';
 import { CreditCard, Check, Filter, TrendingUp, Search, Settings, X, Wallet, Users, PiggyBank, Printer, Download } from 'lucide-react';
@@ -181,19 +182,11 @@ export default function Paiements() {
                 { label: t.totalExpected, value: `${statsAnnuel.totalAttendu.toLocaleString('fr-FR')} DH`, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100' },
                 { label: t.unpaid, value: `${statsAnnuel.totalImpayes.toLocaleString('fr-FR')} DH`, color: 'text-red-500', bg: 'bg-red-50 border-red-100' },
                 { label: t.recoveryRate, value: `${statsAnnuel.tauxRecouvrement}%`, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
-                { label: t.fixedCharge, value: `${essentialAmount} DH`, color: 'text-[#1e3a5f]', bg: 'bg-slate-50 border-slate-100', isConfig: true },
+                { label: t.fixedCharge, value: `${essentialAmount} DH`, color: 'text-[#1e3a5f]', bg: 'bg-slate-50 border-slate-100' },
               ].map((s, i) => (
-                <div key={i} className={`rounded-2xl p-6 shadow-sm border ${s.bg} relative group`}>
+                <div key={i} className={`rounded-2xl p-6 shadow-sm border ${s.bg}`}>
                   <p className="text-sm text-slate-600 font-bold uppercase tracking-wider">{s.label} ({statsAnnuel.annee})</p>
                   <p className={`text-3xl font-black mt-2 ${s.color}`}>{s.value}</p>
-                  {s.isConfig && (
-                    <button
-                      onClick={() => setShowConfig(true)}
-                      className="absolute top-4 right-4 p-2 bg-white rounded-lg shadow-sm border border-slate-200 text-slate-400 hover:text-[#1e3a5f] opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <Settings className="w-4 h-4" />
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
@@ -352,10 +345,10 @@ export default function Paiements() {
         )}
       </div>
 
-      {/* Modal Configuration Charge Mensuelle */}
-      {showConfig && (
-        <div className="fixed inset-0 bg-[#1e3a5f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+      {/* Modal Configuration Charge Mensuelle – Portal */}
+      {showConfig && createPortal(
+        <div className="fixed inset-0 bg-[#1e3a5f]/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" onClick={() => setShowConfig(false)}>
+          <div className="bg-white rounded-[2rem] w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
             <div className="p-6 bg-slate-50 flex items-start justify-between border-b border-slate-100">
               <div>
                 <h3 className="text-xl font-bold text-slate-800">{t.configurationTitle}</h3>
@@ -380,7 +373,8 @@ export default function Paiements() {
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

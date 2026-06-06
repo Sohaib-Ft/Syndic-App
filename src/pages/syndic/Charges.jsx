@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { chargeAPI, paiementAPI, residentChargeAPI } from '../../services/api';
 import { useLang } from '../../contexts/LangContext';
@@ -81,10 +82,6 @@ export default function Charges() {
               <p className="text-lg font-black text-red-700">{totalConsumed.toLocaleString('fr-FR')} DH</p>
             </div>
           </div>
-
-          <button onClick={() => setShowConfig(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-100 text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-100 transition-all ml-2">
-            <Settings className="w-4 h-4" /> {essentialAmount} DH
-          </button>
         </div>
       </div>
 
@@ -146,10 +143,10 @@ export default function Charges() {
         )}
       </div>
 
-      {/* Modal Configuration Charge Mensuelle */}
-      {showConfig && (
-        <div className="fixed inset-0 bg-[#1e3a5f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+      {/* Modal Configuration Charge Mensuelle – Portal */}
+      {showConfig && createPortal(
+        <div className="fixed inset-0 bg-[#1e3a5f]/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" onClick={() => setShowConfig(false)}>
+          <div className="bg-white rounded-[2rem] w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
             <div className="p-6 bg-slate-50 flex items-start justify-between border-b border-slate-100">
               <div>
                 <h3 className="text-xl font-bold text-slate-800">{t.configurationTitle}</h3>
@@ -174,7 +171,8 @@ export default function Charges() {
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
