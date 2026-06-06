@@ -131,7 +131,6 @@ export default function Residents() {
                 <div className="bg-slate-50 rounded-xl p-4">
                   <p className="text-sm font-medium text-slate-500 mb-2">{t.assignedApartment}</p>
                   <p className="font-semibold text-slate-800">{detailModal.data.appartement.numero} — {detailModal.data.appartement.type}</p>
-                  <p className="text-sm text-slate-600">{t.floor} {detailModal.data.appartement.etage} · {detailModal.data.appartement.superficie} m² · {t.charges}: {detailModal.data.appartement.chargesMensuelles?.toLocaleString('fr-FR')} DH/{t.month.toLowerCase()}</p>
                 </div>
               )}
               <div>
