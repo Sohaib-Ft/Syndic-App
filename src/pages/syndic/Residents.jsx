@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { residentAPI, appartementAPI } from '../../services/api';
 import { useLang } from '../../contexts/LangContext';
@@ -104,9 +105,9 @@ export default function Residents() {
         {filtered.length === 0 && <div className="text-center py-12 text-slate-400"><Users className="w-12 h-12 mx-auto mb-3 opacity-50" /><p>{t.notAssigned}</p></div>}
       </div>
 
-      {/* Modal Detail */}
-      {detailModal.open && detailModal.data && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setDetailModal({ open: false, data: null, paiements: [] })}>
+      {/* Modal Detail – rendered via Portal to escape overflow:auto parent */}
+      {detailModal.open && detailModal.data && createPortal(
+        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4" onClick={() => setDetailModal({ open: false, data: null, paiements: [] })}>
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <h3 className="text-lg font-semibold text-slate-800">{t.residentFile}</h3>
@@ -151,7 +152,8 @@ export default function Residents() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
