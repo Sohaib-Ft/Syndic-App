@@ -6,6 +6,7 @@ import { useLang } from '../../contexts/LangContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Users, Plus, Edit, Trash2, Search, Eye, Mail, Phone, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 
 export default function Residents() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function Residents() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [detailModal, setDetailModal] = useState({ open: false, data: null, paiements: [] });
+  const [confirmDel, setConfirmDel] = useState({ open: false, id: null });
 
   useEffect(() => { loadData(); }, []);
 
@@ -36,9 +38,19 @@ export default function Residents() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm(t.deleteResident)) return;
-    try { await residentAPI.delete(id); toast.success(t.residentDeleted); loadData(); }
-    catch (error) { toast.error(error.response?.data?.message || t.error); }
+    setConfirmDel({ open: true, id });
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await residentAPI.delete(confirmDel.id);
+      toast.success(t.residentDeleted);
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || t.error);
+    } finally {
+      setConfirmDel({ open: false, id: null });
+    }
   };
   const filtered = residents.filter(r => `${r.nom} ${r.prenom}`.toLowerCase().includes(search.toLowerCase()));
   if (loading) return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e3a5f]" /></div>;
@@ -156,5 +168,15 @@ export default function Residents() {
         document.body
       )}
     </div>
+
+    <ConfirmModal
+      open={confirmDel.open}
+      title={t.deleteResident || 'Supprimer le résident'}
+      message={t.deleteConfirmMessage || 'Cette action est irréversible. Le résident sera définitivement supprimé.'}
+      confirmLabel={t.delete || 'Supprimer'}
+      cancelLabel={t.cancel || 'Annuler'}
+      onConfirm={confirmDelete}
+      onCancel={() => setConfirmDel({ open: false, id: null })}
+    />
   );
 }

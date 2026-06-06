@@ -4,6 +4,7 @@ import { appartementAPI } from '../../services/api';
 import { useLang } from '../../contexts/LangContext';
 import { Building2, Plus, Edit, Trash2, Search, Home } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 
 export default function Appartements() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function Appartements() {
   const [appartements, setAppartements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [confirm, setConfirm] = useState({ open: false, id: null });
 
   useEffect(() => { loadData(); }, []);
 
@@ -26,13 +28,18 @@ export default function Appartements() {
   const openEdit = (appart) => navigate(`/syndic/appartements/edit/${appart.id}`);
 
   const handleDelete = async (id) => {
-    if (!confirm(t.deleteApartment)) return;
+    setConfirm({ open: true, id });
+  };
+
+  const confirmDelete = async () => {
     try {
-      await appartementAPI.delete(id);
+      await appartementAPI.delete(confirm.id);
       toast.success(t.apartmentDeleted);
       loadData();
     } catch (error) {
       toast.error(error.response?.data?.message || t.error);
+    } finally {
+      setConfirm({ open: false, id: null });
     }
   };
 
@@ -129,6 +136,16 @@ export default function Appartements() {
         )}
       </div>
 
-    </div> 
+    </div>
+
+    <ConfirmModal
+      open={confirm.open}
+      title={t.deleteApartment || 'Supprimer l\'appartement'}
+      message={t.deleteConfirmMessage || 'Cette action est irréversible. L\'appartement sera définitivement supprimé.'}
+      confirmLabel={t.delete || 'Supprimer'}
+      cancelLabel={t.cancel || 'Annuler'}
+      onConfirm={confirmDelete}
+      onCancel={() => setConfirm({ open: false, id: null })}
+    />
   );
 }

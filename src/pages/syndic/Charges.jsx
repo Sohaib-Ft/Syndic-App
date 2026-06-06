@@ -5,6 +5,7 @@ import { chargeAPI, paiementAPI, residentChargeAPI } from '../../services/api';
 import { useLang } from '../../contexts/LangContext';
 import { Plus, Trash2, Edit, TrendingDown, Wallet, PiggyBank, ArrowDownRight, Receipt, Settings, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 
 export default function Charges() {
   const { t } = useLang();
@@ -16,6 +17,7 @@ export default function Charges() {
   const [statsAnnuel, setStatsAnnuel] = useState(null);
   const [showConfig, setShowConfig] = useState(false);
   const [essentialAmount, setEssentialAmount] = useState('');
+  const [confirmDel, setConfirmDel] = useState({ open: false, id: null });
 
   useEffect(() => {
     loadData();
@@ -49,6 +51,22 @@ export default function Charges() {
       setShowConfig(false);
     } catch {
       toast.error(t.error);
+    }
+  };
+
+  const handleDelete = (id) => {
+    setConfirmDel({ open: true, id });
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await chargeAPI.delete(confirmDel.id);
+      toast.success(t.chargeDeleted || 'Charge supprimée.');
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || t.error);
+    } finally {
+      setConfirmDel({ open: false, id: null });
     }
   };
 
@@ -174,6 +192,16 @@ export default function Charges() {
         </div>,
         document.body
       )}
+
+      <ConfirmModal
+        open={confirmDel.open}
+        title={t.deleteCharge || 'Supprimer la charge'}
+        message={t.deleteConfirmMessage || 'Cette action est irréversible. La charge sera définitivement supprimée.'}
+        confirmLabel={t.delete || 'Supprimer'}
+        cancelLabel={t.cancel || 'Annuler'}
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmDel({ open: false, id: null })}
+      />
     </div>
   );
 }
