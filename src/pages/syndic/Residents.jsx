@@ -56,6 +56,7 @@ export default function Residents() {
   if (loading) return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e3a5f]" /></div>;
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -178,5 +179,6 @@ export default function Residents() {
       onConfirm={confirmDelete}
       onCancel={() => setConfirmDel({ open: false, id: null })}
     />
+    </>
   );
 }

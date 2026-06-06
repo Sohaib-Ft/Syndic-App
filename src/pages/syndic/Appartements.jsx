@@ -55,6 +55,7 @@ export default function Appartements() {
   );
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -147,5 +148,6 @@ export default function Appartements() {
       onConfirm={confirmDelete}
       onCancel={() => setConfirm({ open: false, id: null })}
     />
+    </>
   );
 }
