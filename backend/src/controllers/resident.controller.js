@@ -79,12 +79,29 @@ export const createResident = async (req, res) => {
 
     // Mettre à jour le statut de l'appartement
     if (appartementId) {
-      await prisma.appartement.update({ where: { id: parseInt(appartementId) }, data: { statut: 'OCCUPE' } });
+      // Synchroniser chargesMensuelles avec la charge essentielle si l'appart a 0
+      const essKeyForAppart = `CHARGE_ESSENTIELLE_${req.user.id}`;
+      const essSettingForAppart = await prisma.setting.findUnique({ where: { key: essKeyForAppart } });
+      const chargeEssentielle = essSettingForAppart ? parseFloat(essSettingForAppart.value) : 0;
+
+      const appartUpdateData = { statut: 'OCCUPE' };
+      if (chargeEssentielle > 0 && (!resident.appartement.chargesMensuelles || resident.appartement.chargesMensuelles === 0)) {
+        appartUpdateData.chargesMensuelles = chargeEssentielle;
+      }
+      await prisma.appartement.update({ where: { id: parseInt(appartementId) }, data: appartUpdateData });
 
       // Générer automatiquement le paiement pour le mois en cours
       const now = new Date();
       const currentMonth = now.getMonth() + 1;
       const currentYear = now.getFullYear();
+
+      // Récupérer le bon montant : chargesMensuelles de l'appart OU charge essentielle globale
+      let montantPaiement = resident.appartement.chargesMensuelles || 0;
+      if (!montantPaiement) {
+        const essKey = `CHARGE_ESSENTIELLE_${req.user.id}`;
+        const essSetting = await prisma.setting.findUnique({ where: { key: essKey } });
+        montantPaiement = essSetting ? parseFloat(essSetting.value) : 0;
+      }
 
       const existingPayment = await prisma.paiement.findUnique({
         where: {
@@ -99,7 +116,7 @@ export const createResident = async (req, res) => {
       if (!existingPayment) {
         await prisma.paiement.create({
           data: {
-            montant: resident.appartement.chargesMensuelles || 0,
+            montant: montantPaiement,
             mois: currentMonth,
             annee: currentYear,
             appartementId: parseInt(appartementId),
@@ -108,9 +125,13 @@ export const createResident = async (req, res) => {
           }
         });
       } else {
+        // Mettre à jour le résident et le montant si le paiement existant a montant 0
         await prisma.paiement.update({
           where: { id: existingPayment.id },
-          data: { residentId: resident.id }
+          data: {
+            residentId: resident.id,
+            ...(existingPayment.montant === 0 && { montant: montantPaiement })
+          }
         });
       }
     }
@@ -160,6 +181,14 @@ export const updateResident = async (req, res) => {
         const currentMonth = now.getMonth() + 1;
         const currentYear = now.getFullYear();
 
+        // Récupérer le bon montant : chargesMensuelles de l'appart OU charge essentielle globale
+        let montantPaiement = appart.chargesMensuelles || 0;
+        if (!montantPaiement) {
+          const essKey = `CHARGE_ESSENTIELLE_${req.user.id}`;
+          const essSetting = await prisma.setting.findUnique({ where: { key: essKey } });
+          montantPaiement = essSetting ? parseFloat(essSetting.value) : 0;
+        }
+
         const existingPayment = await prisma.paiement.findUnique({
           where: {
             appartementId_mois_annee: {
@@ -173,7 +202,7 @@ export const updateResident = async (req, res) => {
         if (!existingPayment) {
           await prisma.paiement.create({
             data: {
-              montant: appart.chargesMensuelles || 0,
+              montant: montantPaiement,
               mois: currentMonth,
               annee: currentYear,
               appartementId: parseInt(appartementId),
@@ -182,9 +211,13 @@ export const updateResident = async (req, res) => {
             }
           });
         } else {
+          // Mettre à jour le résident et le montant si le paiement existant a montant 0
           await prisma.paiement.update({
             where: { id: existingPayment.id },
-            data: { residentId: parseInt(id) }
+            data: {
+              residentId: parseInt(id),
+              ...(existingPayment.montant === 0 && { montant: montantPaiement })
+            }
           });
         }
       }
